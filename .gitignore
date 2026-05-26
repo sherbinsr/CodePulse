@@ -1,0 +1,25 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+*.egg
+
+# Next.js
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+# PostgreSQL
+postgres_data/
+
+# General
+.DS_Store
+*.log
