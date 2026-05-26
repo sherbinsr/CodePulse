@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Org } from "@/types";
 
 const navItems = [
@@ -30,6 +31,7 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
   const pathname = usePathname();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -37,7 +39,8 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
   };
 
   return (
-    <aside className="w-60 shrink-0 bg-slate-900 flex flex-col border-r border-slate-800 min-h-screen">
+    <>
+    <aside className="w-60 shrink-0 bg-slate-900 flex flex-col border-r border-slate-800 h-screen sticky top-0 overflow-y-auto">
       <div className="flex items-center gap-2 px-5 py-5 border-b border-slate-800">
         <GitBranch className="h-5 w-5 text-indigo-400" />
         <span className="text-white font-bold">CodePulse</span>
@@ -115,15 +118,52 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-slate-800">
+      <div className="px-3 py-4 border-t border-slate-800 sticky bottom-0 bg-slate-900">
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Sign out
         </button>
       </div>
+
     </aside>
+
+      {showLogoutConfirm && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-80 mx-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-50 rounded-full p-3">
+                <LogOut className="h-6 w-6 text-red-500" />
+              </div>
+            </div>
+            <h3 className="text-slate-900 font-semibold text-center text-lg mb-1">Sign out?</h3>
+            <p className="text-slate-500 text-sm text-center mb-6">
+              You'll need to reconnect GitHub to access your analytics again.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

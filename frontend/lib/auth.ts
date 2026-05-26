@@ -24,8 +24,7 @@ export function setUser(user: User): void {
 }
 
 export function logout(): void {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  localStorage.clear();
 }
 
 export function getGitHubOAuthUrl(): string {

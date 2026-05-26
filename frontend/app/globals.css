@@ -49,5 +49,9 @@
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  html { @apply bg-slate-900; }
+  body {
+    @apply bg-background text-foreground;
+    overscroll-behavior: none;
+  }
 }
