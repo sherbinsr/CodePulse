@@ -6,11 +6,10 @@ import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { getDeveloperStats, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { formatHours, stateColor } from "@/lib/utils";
+import { formatHours } from "@/lib/utils";
 import type { DeveloperStat, SyncStatus, User } from "@/types";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
 
 function DevelopersContent() {
@@ -20,25 +19,27 @@ function DevelopersContent() {
   const [selected, setSelected] = useState<DeveloperStat | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!org) return;
     setLoading(true);
+    setError(null);
     try {
       const [data, sync] = await Promise.all([getDeveloperStats(org), getSyncStatus(org)]);
       setDevs(data);
       setSyncStatus(sync);
       if (data.length > 0) setSelected(data[0]);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "Failed to load developer data.");
     } finally {
       setLoading(false);
     }
   }, [org]);
 
-  useEffect(() => {
-    setUser(getUser());
-    load();
-  }, [load]);
+  useEffect(() => { setUser(getUser()); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const radarData = selected
     ? [
@@ -46,7 +47,7 @@ function DevelopersContent() {
         { metric: "Merged", value: selected.merged_prs },
         { metric: "Reviews", value: selected.reviews_given },
         { metric: "Approvals", value: selected.approvals },
-        { metric: "Additions(k)", value: Math.round(selected.total_additions / 1000) },
+        { metric: "+k Lines", value: Math.round(selected.total_additions / 1000) },
       ]
     : [];
 
@@ -54,11 +55,24 @@ function DevelopersContent() {
     <div className="flex flex-col h-full">
       <Header title="Developer Analytics" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
       <div className="flex-1 p-6 overflow-auto">
-        {loading ? (
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>
+        )}
+
+        {loading && (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
           </div>
-        ) : (
+        )}
+
+        {!loading && !error && org && devs.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-64 text-center gap-2">
+            <p className="text-slate-500">No developer data found for <strong>{org}</strong>.</p>
+            <p className="text-sm text-slate-400">Click <strong>Sync Now</strong> to fetch data from GitHub.</p>
+          </div>
+        )}
+
+        {!loading && !error && devs.length > 0 && (
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Table */}
             <div className="xl:col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -121,7 +135,7 @@ function DevelopersContent() {
                     )}
                     <div>
                       <h3 className="font-semibold text-slate-900">{selected.login}</h3>
-                      <p className="text-xs text-slate-400">{selected.total_prs} PRs · {selected.reviews_given} reviews given</p>
+                      <p className="text-xs text-slate-400">{selected.total_prs} PRs · {selected.reviews_given} reviews</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">

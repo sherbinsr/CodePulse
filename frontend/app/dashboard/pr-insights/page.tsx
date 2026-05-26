@@ -20,11 +20,13 @@ function PRInsightsContent() {
   const [filters, setFilters] = useState({ repo: "", author: "", state: "" });
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!org) return;
     setLoading(true);
+    setError(null);
     try {
       const [{ data, total: t }, repoData, sync] = await Promise.all([
         getPRList(org, {
@@ -41,6 +43,8 @@ function PRInsightsContent() {
       setTotal(t);
       setRepos(repoData);
       setSyncStatus(sync);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "Failed to load PR data.");
     } finally {
       setLoading(false);
     }
@@ -55,6 +59,10 @@ function PRInsightsContent() {
     <div className="flex flex-col h-full">
       <Header title="PR Insights" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
       <div className="flex-1 p-6 overflow-auto space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>
+        )}
+
         {/* Filters */}
         <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap gap-3">
           <select
@@ -82,14 +90,25 @@ function PRInsightsContent() {
             onChange={(e) => { setFilters({ ...filters, author: e.target.value }); setPage(0); }}
             className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-44"
           />
-          <span className="text-sm text-slate-500 self-center ml-auto">{total.toLocaleString()} PRs</span>
+          <span className="text-sm text-slate-500 self-center ml-auto">
+            {total.toLocaleString()} PRs
+          </span>
         </div>
 
-        {loading ? (
+        {loading && (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
           </div>
-        ) : (
+        )}
+
+        {!loading && !error && org && prs.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-64 text-center gap-2">
+            <p className="text-slate-500">No PRs found for <strong>{org}</strong>.</p>
+            <p className="text-sm text-slate-400">Click <strong>Sync Now</strong> to fetch data from GitHub.</p>
+          </div>
+        )}
+
+        {!loading && !error && prs.length > 0 && (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -131,7 +150,6 @@ function PRInsightsContent() {
               </tbody>
             </table>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-t border-slate-200">
                 <button
@@ -141,9 +159,7 @@ function PRInsightsContent() {
                 >
                   Previous
                 </button>
-                <span className="text-sm text-slate-500">
-                  Page {page + 1} of {totalPages}
-                </span>
+                <span className="text-sm text-slate-500">Page {page + 1} of {totalPages}</span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page === totalPages - 1}

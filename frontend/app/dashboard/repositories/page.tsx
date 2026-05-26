@@ -7,7 +7,19 @@ import { getRepoStats, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatHours } from "@/lib/utils";
 import type { RepoStat, SyncStatus, User } from "@/types";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend,
+} from "recharts";
+
+function EmptyState({ org, onSync }: { org: string; onSync: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-64 text-center gap-4">
+      <p className="text-slate-500">No repository data found for <strong>{org}</strong>.</p>
+      <p className="text-sm text-slate-400">Click <strong>Sync Now</strong> in the header to fetch data from GitHub.</p>
+    </div>
+  );
+}
 
 function RepositoriesContent() {
   const params = useSearchParams();
@@ -15,54 +27,114 @@ function RepositoriesContent() {
   const [repos, setRepos] = useState<RepoStat[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     if (!org) return;
     setLoading(true);
+    setError(null);
     try {
       const [data, sync] = await Promise.all([getRepoStats(org), getSyncStatus(org)]);
       setRepos(data);
       setSyncStatus(sync);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "Failed to load repository data.");
     } finally {
       setLoading(false);
     }
   }, [org]);
 
-  useEffect(() => { setUser(getUser()); load(); }, [load]);
+  useEffect(() => { setUser(getUser()); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const filtered = repos.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = repos.filter((r) =>
+    r.name.toLowerCase().includes(search.toLowerCase())
+  );
   const top10 = repos.slice(0, 10);
 
   return (
     <div className="flex flex-col h-full">
-      <Header title="Repository Analytics" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
+      <Header
+        title="Repository Analytics"
+        org={org}
+        user={user}
+        syncStatus={syncStatus}
+        onSyncComplete={load}
+      />
       <div className="flex-1 p-6 overflow-auto space-y-6">
-        {loading ? (
+        {!org && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-sm">
+            No organization selected. Go back to the overview and select one.
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        {loading && (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
           </div>
-        ) : (
+        )}
+
+        {!loading && !error && org && repos.length === 0 && (
+          <EmptyState org={org} onSync={load} />
+        )}
+
+        {!loading && !error && repos.length > 0 && (
           <>
             <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h3 className="font-semibold text-slate-800 mb-4">PR Volume by Repository (Top 10)</h3>
+              <h3 className="font-semibold text-slate-800 mb-4">
+                PR Volume by Repository (Top 10)
+              </h3>
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={top10} margin={{ top: 0, right: 16, bottom: 60, left: 0 }}>
+                <BarChart
+                  data={top10}
+                  margin={{ top: 0, right: 16, bottom: 60, left: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#475569" }} angle={-35} textAnchor="end" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: "#475569" }}
+                    angle={-35}
+                    textAnchor="end"
+                  />
                   <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      fontSize: 12,
+                    }}
+                  />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-                  <Bar dataKey="merged_prs" name="Merged" fill="#6366f1" stackId="a" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="open_prs" name="Open" fill="#22c55e" stackId="a" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="merged_prs"
+                    name="Merged"
+                    fill="#6366f1"
+                    stackId="a"
+                  />
+                  <Bar
+                    dataKey="open_prs"
+                    name="Open"
+                    fill="#22c55e"
+                    stackId="a"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-800">All Repositories</h3>
+                <h3 className="font-semibold text-slate-800">
+                  All Repositories ({repos.length})
+                </h3>
                 <input
                   type="text"
                   placeholder="Search repos…"

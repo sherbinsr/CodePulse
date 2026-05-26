@@ -20,6 +20,6 @@ async def get_db():
 
 
 async def init_db():
-    from app.models import user, repository, pull_request  # noqa: F401
+    import app.models  # noqa: F401 — registers all models with Base.metadata
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

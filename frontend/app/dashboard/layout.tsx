@@ -1,38 +1,74 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
-import { getToken, getUser, logout } from "@/lib/auth";
-import { listOrgs } from "@/lib/api";
-import type { Org, User } from "@/types";
+import { getToken, logout } from "@/lib/auth";
+import { listOrgs, triggerSync } from "@/lib/api";
+import type { Org } from "@/types";
 import { Suspense } from "react";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const params = useSearchParams();
+  const urlOrg = params.get("org") ?? "";
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const [org, setOrg] = useState(params.get("org") ?? "");
-  const [user, setUser] = useState<User | null>(null);
+  const [org, setOrg] = useState(urlOrg);
   const [loading, setLoading] = useState(true);
+
+  // Sync org into URL whenever it changes
+  useEffect(() => {
+    if (!org) return;
+    const current = params.get("org");
+    if (current !== org) {
+      router.replace(`${pathname}?org=${org}`);
+    }
+  }, [org]);
 
   useEffect(() => {
     const token = getToken();
     if (!token) { router.push("/"); return; }
 
-    const u = getUser();
-    setUser(u);
-
     listOrgs()
       .then((data) => {
         setOrgs(data);
-        if (!org && data.length > 0) setOrg(data[0].login);
+        if (urlOrg) {
+          setOrg(urlOrg);
+        } else if (data.length > 0) {
+          setOrg(data[0].login);
+        }
         setLoading(false);
       })
       .catch(() => {
         logout();
         router.push("/");
       });
-  }, [router]);
+  }, []);
+
+  // Re-sync org state when URL changes (e.g. after "Check again" refreshes the org list)
+  useEffect(() => {
+    if (urlOrg && urlOrg !== org) {
+      setOrg(urlOrg);
+      listOrgs().then(setOrgs).catch(() => {});
+    }
+  }, [urlOrg]);
+
+  const handleOrgChange = (newOrg: string) => {
+    setOrg(newOrg);
+    router.replace(`${pathname}?org=${newOrg}`);
+    triggerSync(newOrg).catch(() => {}); // fire-and-forget; backend deduplicates if already running
+  };
+
+  const handleRefreshOrgs = async () => {
+    try {
+      const data = await listOrgs();
+      setOrgs(data);
+      // If a new org appeared and nothing is selected yet, auto-select it
+      if (!org && data.length > 0) {
+        handleOrgChange(data[0].login);
+      }
+    } catch {}
+  };
 
   if (loading) {
     return (
@@ -42,28 +78,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const hasOrg = orgs.length > 0 && !!org;
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar org={org} />
-      <div className="flex-1 flex flex-col">
-        {/* Org selector bar */}
-        {orgs.length > 1 && (
-          <div className="flex items-center gap-2 bg-slate-800 px-6 py-2">
-            <span className="text-slate-400 text-xs">Organization:</span>
-            <select
-              value={org}
-              onChange={(e) => setOrg(e.target.value)}
-              className="bg-slate-700 text-white text-sm rounded px-2 py-1 border border-slate-600"
-            >
-              {orgs.map((o) => (
-                <option key={o.login} value={o.login}>{o.login}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        <main className="flex-1">
-          {children}
-        </main>
+      <Sidebar org={org} hasOrg={hasOrg} orgs={orgs} onOrgChange={handleOrgChange} onRefreshOrgs={handleRefreshOrgs} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );

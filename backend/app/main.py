@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.api import auth, organizations, analytics
+from app.routers import auth_router, org_router, analytics_router
 
 
 @asynccontextmanager
@@ -28,11 +28,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/api")
-app.include_router(organizations.router, prefix="/api")
-app.include_router(analytics.router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+app.include_router(org_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
 
 
-@app.get("/health")
+@app.get("/health", tags=["Health"])
 async def health():
     return {"status": "ok"}

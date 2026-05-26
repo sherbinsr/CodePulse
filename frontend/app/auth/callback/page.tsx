@@ -1,20 +1,20 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { githubCallback } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
 import { toast } from "sonner";
 import { Suspense } from "react";
 
+// Module-level Set persists across React StrictMode double-mount
+// so the same OAuth code is never sent to the backend twice
+const processedCodes = new Set<string>();
+
 function CallbackHandler() {
   const router = useRouter();
   const params = useSearchParams();
-  const handled = useRef(false);
 
   useEffect(() => {
-    if (handled.current) return;
-    handled.current = true;
-
     const code = params.get("code");
     const error = params.get("error");
 
@@ -23,11 +23,16 @@ function CallbackHandler() {
       router.push("/");
       return;
     }
+
     if (!code) {
       toast.error("No authorization code received.");
       router.push("/");
       return;
     }
+
+    // Guard against double execution in React 18 StrictMode
+    if (processedCodes.has(code)) return;
+    processedCodes.add(code);
 
     githubCallback(code)
       .then(({ access_token, user }) => {
@@ -36,11 +41,13 @@ function CallbackHandler() {
         toast.success(`Welcome, ${user.name || user.login}!`);
         router.push("/dashboard");
       })
-      .catch(() => {
-        toast.error("Authentication failed. Please try again.");
+      .catch((err) => {
+        processedCodes.delete(code); // allow retry
+        const msg = err?.response?.data?.detail ?? "Authentication failed. Please try again.";
+        toast.error(msg);
         router.push("/");
       });
-  }, [params, router]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900">
