@@ -9,8 +9,9 @@ No valid GitHub credentials are required — these tests verify:
   - Invalid auth codes are rejected with 400
 """
 import os
-import pytest
+
 import httpx
+import pytest
 
 BASE = os.getenv("TEST_API_URL", "http://localhost:8000")
 

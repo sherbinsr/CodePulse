@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, case, and_, text
+
+from sqlalchemy import and_, case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.pull_request import PullRequest, PRReview
+from app.models.pull_request import PRReview, PullRequest
 from app.models.repository import Repository
 
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, case, and_, or_, delete, insert, extract, text
+
+from sqlalchemy import and_, case, delete, extract, func, insert, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.commit import Commit

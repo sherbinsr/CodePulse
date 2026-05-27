@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db, AsyncSessionLocal
+from app.database import AsyncSessionLocal, get_db
+from app.models.user import User
+from app.repositories.sync_repository import SyncRepository
 from app.routers.deps import get_current_user
+from app.schemas.organization import OrgOut, SyncStatusOut, SyncTriggerResponse
 from app.services.github_service import GitHubService
 from app.services.sync_service import SyncService
-from app.repositories.sync_repository import SyncRepository
-from app.schemas.organization import OrgOut, SyncTriggerResponse, SyncStatusOut
-from app.models.user import User
 
 router = APIRouter(prefix="/orgs", tags=["Organizations"])
 

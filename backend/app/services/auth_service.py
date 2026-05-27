@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
+
 from fastapi import HTTPException
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.repositories.user_repository import UserRepository
-from app.services.github_service import GitHubService
 from app.schemas.auth import AuthResponse, UserOut
+from app.services.github_service import GitHubService
 
 
 class AuthService:
@@ -25,14 +26,14 @@ class AuthService:
     def decode_token(self, token: str) -> dict:
         try:
             return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        except JWTError:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        except JWTError as exc:
+            raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
     async def github_callback(self, code: str) -> AuthResponse:
         try:
             access_token = await GitHubService.exchange_code(code)
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         gh = GitHubService(access_token)
         gh_user = await gh.get_authenticated_user()

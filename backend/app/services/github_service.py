@@ -1,6 +1,7 @@
 """GitHub API client: REST + GraphQL."""
 from datetime import datetime
 from typing import Any, Optional
+
 import httpx
 
 from app.config import settings

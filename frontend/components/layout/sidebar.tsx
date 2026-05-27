@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  GitPullRequest, Users, GitBranch, Star, Home, LogOut, ChevronsUpDown, RefreshCw, FileText,
+  GitPullRequest, Users, GitBranch, Star, Home, LogOut, ChevronsUpDown, RefreshCw,
+  FileText, Zap, GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -11,13 +12,22 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Org } from "@/types";
 
-const navItems = [
-  { href: "/dashboard",              icon: Home,           label: "Overview",     requiresOrg: false },
-  { href: "/dashboard/repositories", icon: GitBranch,      label: "Repositories", requiresOrg: true },
-  { href: "/dashboard/developers",   icon: Users,          label: "Developers",   requiresOrg: true },
-  { href: "/dashboard/reviews",      icon: Star,           label: "Reviews",      requiresOrg: true },
-  { href: "/dashboard/pr-insights",  icon: GitPullRequest, label: "PR Insights",  requiresOrg: true },
-  { href: "/dashboard/digest",       icon: FileText,       label: "Digest",       requiresOrg: true },
+interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  requiresOrg: boolean;
+}
+
+const navItems: NavItem[] = [
+  { href: "/dashboard",               icon: Home,           label: "Overview",       requiresOrg: false },
+  { href: "/dashboard/repositories",  icon: GitBranch,      label: "Repositories",   requiresOrg: true },
+  { href: "/dashboard/developers",    icon: Users,          label: "Developers",     requiresOrg: true },
+  { href: "/dashboard/reviews",       icon: Star,           label: "Reviews",        requiresOrg: true },
+  { href: "/dashboard/pr-insights",   icon: GitPullRequest, label: "PR Insights",    requiresOrg: true },
+  { href: "/dashboard/ci-insights",   icon: Zap,            label: "CI Insights",    requiresOrg: true },
+  { href: "/dashboard/commit-activity", icon: GitCommit,    label: "Commit Activity",requiresOrg: true },
+  { href: "/dashboard/digest",        icon: FileText,       label: "Digest",         requiresOrg: true },
 ];
 
 interface SidebarProps {

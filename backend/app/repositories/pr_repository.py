@@ -1,8 +1,9 @@
 from typing import Optional
-from sqlalchemy import select, delete, func
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.pull_request import PullRequest, PRReview
+from app.models.pull_request import PRReview, PullRequest
 
 
 class PRRepository:

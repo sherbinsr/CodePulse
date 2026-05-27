@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, DateTime, Integer, BigInteger, Text, ForeignKey, Float
+
+from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
 
 

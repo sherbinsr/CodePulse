@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth_router, org_router, analytics_router
+from app.routers import analytics_router, auth_router, org_router
 
 
 @asynccontextmanager

@@ -14,10 +14,10 @@ import type { DeveloperStat, ReviewNetwork, SyncStatus, User } from "@/types";
 function cellColor(count: number, max: number): string {
   if (count === 0 || max === 0) return "bg-slate-50 text-slate-300";
   const ratio = count / max;
-  if (ratio >= 0.75) return "bg-indigo-600 text-white";
-  if (ratio >= 0.5)  return "bg-indigo-400 text-white";
-  if (ratio >= 0.25) return "bg-indigo-200 text-indigo-800";
-  return "bg-indigo-100 text-indigo-600";
+  if (ratio >= 0.75) return "bg-emerald-600 text-white";
+  if (ratio >= 0.5)  return "bg-emerald-400 text-white";
+  if (ratio >= 0.25) return "bg-emerald-200 text-emerald-900";
+  return "bg-emerald-100 text-emerald-700";
 }
 
 function ReviewHeatmap({ network }: { network: ReviewNetwork[] }) {
@@ -133,7 +133,7 @@ function ReviewHeatmap({ network }: { network: ReviewNetwork[] }) {
       {/* Legend */}
       <div className="flex items-center gap-2 mt-5 justify-end">
         <span className="text-[11px] text-slate-400">Less</span>
-        {["bg-indigo-100", "bg-indigo-200", "bg-indigo-400", "bg-indigo-600"].map((c) => (
+        {["bg-emerald-100", "bg-emerald-200", "bg-emerald-400", "bg-emerald-600"].map((c) => (
           <span key={c} className={`inline-block w-5 h-5 rounded-sm ${c}`} />
         ))}
         <span className="text-[11px] text-slate-400">More</span>
@@ -224,9 +224,6 @@ function ReviewsContent() {
 
         {!loading && !error && devs.length > 0 && (
           <>
-            {/* Heatmap */}
-            {network.length > 0 && <ReviewHeatmap network={network} />}
-
             {/* Top reviewers */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
               <h3 className="font-semibold text-slate-800 mb-5">Top Reviewers</h3>
@@ -257,6 +254,9 @@ function ReviewsContent() {
                 ))}
               </div>
             </div>
+
+            {/* Heatmap — between Top Reviewers and Review Participation */}
+            {network.length > 0 && <ReviewHeatmap network={network} />}
 
             {/* Review participation */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">

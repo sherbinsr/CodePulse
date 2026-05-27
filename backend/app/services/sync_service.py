@@ -1,13 +1,24 @@
 """Orchestrates the background sync: GitHub API → repositories → DB."""
 from datetime import datetime, timedelta
+from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.github_service import GitHubService
+from app.repositories.ci_repository import CIRepository
+from app.repositories.commit_repository import CommitRepository
 from app.repositories.pr_repository import PRRepository
 from app.repositories.repo_repository import RepoRepository
 from app.repositories.sync_repository import SyncRepository
-from app.repositories.ci_repository import CIRepository
-from app.repositories.commit_repository import CommitRepository
+from app.services.github_service import GitHubService
+
+
+def _run_duration(r: dict) -> Optional[int]:
+    from app.services.github_service import GitHubService
+    created = GitHubService.parse_datetime(r.get("created_at"))
+    updated = GitHubService.parse_datetime(r.get("updated_at"))
+    if created and updated:
+        return max(0, int((updated - created).total_seconds()))
+    return None
 
 
 class SyncService:
@@ -99,6 +110,60 @@ class SyncService:
                         )
 
                     prs_synced += 1
+
+                # Sync CI workflow runs (supplementary — failures are non-fatal)
+                try:
+                    runs_data = await gh.fetch_workflow_runs(full_name)
+                    await self.ci_repo.delete_by_repo(full_name)
+                    if runs_data:
+                        now = datetime.utcnow()
+                        await self.ci_repo.bulk_insert([
+                            {
+                                "github_run_id": r["id"],
+                                "repo_full_name": full_name,
+                                "org": org,
+                                "workflow_name": r.get("name", ""),
+                                "status": r.get("status", ""),
+                                "conclusion": r.get("conclusion"),
+                                "head_branch": r.get("head_branch"),
+                                "run_attempt": r.get("run_attempt", 1),
+                                "duration_seconds": _run_duration(r),
+                                "created_at": gh.parse_datetime(r["created_at"]) or now,
+                                "synced_at": now,
+                            }
+                            for r in runs_data
+                            if r.get("created_at")
+                        ])
+                except Exception:
+                    pass
+
+                # Sync commits (last 90 days, supplementary — failures are non-fatal)
+                try:
+                    since_iso = (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    commits_data = await gh.fetch_commits(full_name, since_iso)
+                    await self.commit_repo.delete_by_repo(full_name)
+                    if commits_data:
+                        now = datetime.utcnow()
+                        rows = []
+                        for c in commits_data:
+                            date_str = c.get("commit", {}).get("author", {}).get("date")
+                            committed_at = gh.parse_datetime(date_str)
+                            if not committed_at:
+                                continue
+                            author_gh = c.get("author") or {}
+                            rows.append({
+                                "sha": c["sha"],
+                                "repo_full_name": full_name,
+                                "org": org,
+                                "author_login": author_gh.get("login"),
+                                "author_avatar": author_gh.get("avatar_url"),
+                                "author_name": c.get("commit", {}).get("author", {}).get("name", ""),
+                                "committed_at": committed_at,
+                                "synced_at": now,
+                            })
+                        await self.commit_repo.bulk_insert(rows)
+                except Exception:
+                    pass
 
                 repos_synced += 1
                 await self.db.commit()

@@ -1,14 +1,25 @@
 from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.pr_repository import PRRepository
 from app.schemas.analytics import (
-    OrgOverviewOut, DeveloperStatOut, RepoStatOut,
-    MonthlyTrendOut, ReviewNetworkOut, DigestOut,
-    DigestContributorOut, DigestRepoOut,
+    BuildTrendOut,
+    CISummaryOut,
+    CodeChurnOut,
+    CommitActivityOut,
+    DeveloperStatOut,
+    DigestContributorOut,
+    DigestOut,
+    DigestRepoOut,
+    FlakyWorkflowOut,
+    MonthlyTrendOut,
+    OrgOverviewOut,
+    ReviewNetworkOut,
+    RepoStatOut,
 )
-from app.schemas.pull_request import PullRequestOut, PRListResponse
+from app.schemas.pull_request import PRListResponse, PullRequestOut
 
 
 class AnalyticsService:
@@ -55,6 +66,31 @@ class AnalyticsService:
             top_repos=top_repos,
             **data,
         )
+
+    async def get_ci_summary(self, org: str) -> list:
+        from app.repositories.ci_repository import CIRepository
+        rows = await CIRepository(self.analytics_repo.db).get_ci_summary(org)
+        return [CISummaryOut(**r) for r in rows]
+
+    async def get_build_trends(self, org: str) -> list:
+        from app.repositories.ci_repository import CIRepository
+        rows = await CIRepository(self.analytics_repo.db).get_build_trends(org)
+        return [BuildTrendOut(**r) for r in rows]
+
+    async def get_flaky_workflows(self, org: str) -> list:
+        from app.repositories.ci_repository import CIRepository
+        rows = await CIRepository(self.analytics_repo.db).get_flaky_workflows(org)
+        return [FlakyWorkflowOut(**r) for r in rows]
+
+    async def get_commit_activity(self, org: str) -> list:
+        from app.repositories.commit_repository import CommitRepository
+        rows = await CommitRepository(self.analytics_repo.db).get_commit_activity(org)
+        return [CommitActivityOut(**r) for r in rows]
+
+    async def get_code_churn(self, org: str) -> list:
+        from app.repositories.commit_repository import CommitRepository
+        rows = await CommitRepository(self.analytics_repo.db).get_code_churn(org)
+        return [CodeChurnOut(**r) for r in rows]
 
     async def get_review_network(self, org: str) -> list:
         rows = await self.analytics_repo.get_review_network(org)

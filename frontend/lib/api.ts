@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
   ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
+  CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
 } from "@/types";
 
 const api = axios.create({
@@ -72,6 +73,31 @@ export const getPRList = async (
   params?: { repo?: string; author?: string; state?: string; limit?: number; offset?: number }
 ): Promise<{ data: PullRequest[]; total: number }> => {
   const { data } = await api.get(`/api/analytics/${org}/prs`, { params });
+  return data;
+};
+
+export const getCISummary = async (org: string): Promise<CISummary[]> => {
+  const { data } = await api.get(`/api/analytics/${org}/ci-summary`);
+  return data;
+};
+
+export const getBuildTrends = async (org: string): Promise<BuildTrend[]> => {
+  const { data } = await api.get(`/api/analytics/${org}/ci-trends`);
+  return data;
+};
+
+export const getFlakyWorkflows = async (org: string): Promise<FlakyWorkflow[]> => {
+  const { data } = await api.get(`/api/analytics/${org}/ci-flaky`);
+  return data;
+};
+
+export const getCommitActivity = async (org: string): Promise<CommitActivity[]> => {
+  const { data } = await api.get(`/api/analytics/${org}/commit-activity`);
+  return data;
+};
+
+export const getCodeChurn = async (org: string): Promise<CodeChurn[]> => {
+  const { data } = await api.get(`/api/analytics/${org}/commit-churn`);
   return data;
 };
 

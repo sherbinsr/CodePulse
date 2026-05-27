@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, case, and_, or_, delete, insert, text
+
+from sqlalchemy import and_, case, delete, func, insert, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.workflow_run import WorkflowRun
@@ -17,9 +18,6 @@ class CIRepository:
             await self.db.execute(insert(WorkflowRun), runs)
 
     async def get_ci_summary(self, org: str) -> list[dict]:
-        flaky_expr = func.sum(
-            case((and_(WorkflowRun.run_attempt > 1, WorkflowRun.conclusion == "success"), 1), else_=0)
-        )
         rows = await self.db.execute(
             select(
                 WorkflowRun.repo_full_name,

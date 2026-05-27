@@ -1,11 +1,12 @@
 """Shared FastAPI dependencies."""
 from typing import Optional
+
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.services.auth_service import AuthService
 from app.models.user import User
+from app.services.auth_service import AuthService
 
 
 async def get_current_user(

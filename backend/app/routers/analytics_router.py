@@ -1,16 +1,26 @@
 from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.models.user import User
 from app.routers.deps import get_current_user
-from app.services.analytics_service import AnalyticsService
 from app.schemas.analytics import (
-    OrgOverviewOut, DeveloperStatOut, RepoStatOut,
-    MonthlyTrendOut, ReviewNetworkOut, DigestOut,
+    BuildTrendOut,
+    CISummaryOut,
+    CodeChurnOut,
+    CommitActivityOut,
+    DeveloperStatOut,
+    DigestOut,
+    FlakyWorkflowOut,
+    MonthlyTrendOut,
+    OrgOverviewOut,
+    ReviewNetworkOut,
+    RepoStatOut,
 )
 from app.schemas.pull_request import PRListResponse
-from app.models.user import User
+from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -69,6 +79,51 @@ async def org_digest(
     db: AsyncSession = Depends(get_db),
 ):
     return await AnalyticsService(db).get_digest(org, period)
+
+
+@router.get("/{org}/ci-summary", response_model=list[CISummaryOut])
+async def ci_summary(
+    org: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AnalyticsService(db).get_ci_summary(org)
+
+
+@router.get("/{org}/ci-trends", response_model=list[BuildTrendOut])
+async def ci_trends(
+    org: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AnalyticsService(db).get_build_trends(org)
+
+
+@router.get("/{org}/ci-flaky", response_model=list[FlakyWorkflowOut])
+async def ci_flaky(
+    org: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AnalyticsService(db).get_flaky_workflows(org)
+
+
+@router.get("/{org}/commit-activity", response_model=list[CommitActivityOut])
+async def commit_activity(
+    org: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AnalyticsService(db).get_commit_activity(org)
+
+
+@router.get("/{org}/commit-churn", response_model=list[CodeChurnOut])
+async def commit_churn(
+    org: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AnalyticsService(db).get_code_churn(org)
 
 
 @router.get("/{org}/prs", response_model=PRListResponse)
