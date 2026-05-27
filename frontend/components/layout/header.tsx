@@ -62,10 +62,10 @@ export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderP
           <button
             onClick={handleSync}
             disabled={syncing || syncStatus?.status === "running"}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            title={syncing ? "Syncing…" : "Sync Now"}
+            className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-lg transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Syncing…" : "Sync Now"}
           </button>
         )}
         {user && (
