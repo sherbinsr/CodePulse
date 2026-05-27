@@ -40,6 +40,9 @@ class AuthService:
         except ValueError as exc:
             logger.error("GitHub OAuth code exchange failed: %s", exc)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.error("GitHub OAuth code exchange error: %s", exc)
+            raise HTTPException(status_code=400, detail="GitHub OAuth failed") from exc
 
         gh = GitHubService(access_token)
         gh_user = await gh.get_authenticated_user()
