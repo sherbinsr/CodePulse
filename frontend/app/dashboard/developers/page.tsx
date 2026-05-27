@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { getDeveloperStats, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { formatHours } from "@/lib/utils";
+import { formatHours, getApiError } from "@/lib/utils";
 import type { DeveloperStat, SyncStatus, User } from "@/types";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
@@ -21,35 +21,43 @@ function DevelopersContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reqRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!org) return;
+    const req = ++reqRef.current;
     setLoading(true);
     setError(null);
     try {
       const [data, sync] = await Promise.all([getDeveloperStats(org), getSyncStatus(org)]);
+      if (req !== reqRef.current) return;
       setDevs(data);
       setSyncStatus(sync);
       if (data.length > 0) setSelected(data[0]);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Failed to load developer data.");
+    } catch (e: unknown) {
+      if (req !== reqRef.current) return;
+      setError(getApiError(e, "Failed to load developer data."));
     } finally {
-      setLoading(false);
+      if (req === reqRef.current) setLoading(false);
     }
   }, [org]);
 
   useEffect(() => { setUser(getUser()); }, []);
   useEffect(() => { load(); }, [load]);
 
-  const radarData = selected
-    ? [
-        { metric: "PRs", value: selected.total_prs },
-        { metric: "Merged", value: selected.merged_prs },
-        { metric: "Reviews", value: selected.reviews_given },
-        { metric: "Approvals", value: selected.approvals },
-        { metric: "+k Lines", value: Math.round(selected.total_additions / 1000) },
-      ]
-    : [];
+  const radarData = useMemo(
+    () =>
+      selected
+        ? [
+            { metric: "PRs", value: selected.total_prs },
+            { metric: "Merged", value: selected.merged_prs },
+            { metric: "Reviews", value: selected.reviews_given },
+            { metric: "Approvals", value: selected.approvals },
+            { metric: "+k Lines", value: Math.round(selected.total_additions / 1000) },
+          ]
+        : [],
+    [selected],
+  );
 
   return (
     <div className="flex flex-col h-full bg-slate-50">

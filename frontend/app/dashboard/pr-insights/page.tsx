@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
 import { getPRList, getRepoStats, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { formatHours, relativeTime, stateColor } from "@/lib/utils";
+import { formatHours, relativeTime, stateColor, getApiError } from "@/lib/utils";
 import type { PullRequest, RepoStat, SyncStatus, User } from "@/types";
 
 const PAGE_SIZE = 50;
@@ -22,9 +22,11 @@ function PRInsightsContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reqRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!org) return;
+    const req = ++reqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -39,14 +41,16 @@ function PRInsightsContent() {
         getRepoStats(org),
         getSyncStatus(org),
       ]);
+      if (req !== reqRef.current) return;
       setPrs(data);
       setTotal(t);
       setRepos(repoData);
       setSyncStatus(sync);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Failed to load PR data.");
+    } catch (e: unknown) {
+      if (req !== reqRef.current) return;
+      setError(getApiError(e, "Failed to load PR data."));
     } finally {
-      setLoading(false);
+      if (req === reqRef.current) setLoading(false);
     }
   }, [org, filters, page]);
 

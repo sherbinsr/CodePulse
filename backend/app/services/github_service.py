@@ -178,6 +178,37 @@ class GitHubService:
             return None
         return round((end - start).total_seconds() / 3600, 2)
 
+    async def fetch_workflow_runs(self, repo_full_name: str) -> list[dict]:
+        """Fetch up to 1000 completed workflow runs for a repo."""
+        runs: list[dict] = []
+        page = 1
+        while page <= 10:
+            try:
+                data = await self._rest_get(
+                    f"/repos/{repo_full_name}/actions/runs",
+                    {"per_page": 100, "page": page, "status": "completed"},
+                )
+            except Exception:
+                break
+            batch = data.get("workflow_runs", []) if isinstance(data, dict) else []
+            if not batch:
+                break
+            runs.extend(batch)
+            if len(batch) < 100:
+                break
+            page += 1
+        return runs
+
+    async def fetch_commits(self, repo_full_name: str, since: str) -> list[dict]:
+        """Fetch commits since ISO datetime string (e.g. '2026-01-01T00:00:00Z')."""
+        try:
+            return await self._rest_get_paginated(
+                f"/repos/{repo_full_name}/commits",
+                {"since": since},
+            )
+        except Exception:
+            return []
+
     @staticmethod
     async def exchange_code(code: str) -> str:
         async with httpx.AsyncClient(timeout=15) as client:

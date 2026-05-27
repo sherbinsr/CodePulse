@@ -1,15 +1,15 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
 import { getRepoStats, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { formatHours } from "@/lib/utils";
+import { formatHours, getApiError } from "@/lib/utils";
 import type { RepoStat, SyncStatus, User } from "@/types";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer,
 } from "recharts";
 
 function EmptyState({ org, onSync }: { org: string; onSync: () => void }) {
@@ -21,12 +21,24 @@ function EmptyState({ org, onSync }: { org: string; onSync: () => void }) {
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipPayloadEntry {
+  name: string;
+  value: number;
+  fill: string;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+}
+
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-100 px-4 py-3 text-sm">
       <p className="font-semibold text-slate-700 mb-2">{label}</p>
-      {payload.map((entry: any) => (
+      {payload.map((entry) => (
         <div key={entry.name} className="flex items-center gap-2 mb-1">
           <span className="inline-block w-2 h-2 rounded-full" style={{ background: entry.fill }} />
           <span className="text-slate-500">{entry.name}:</span>
@@ -46,29 +58,34 @@ function RepositoriesContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const reqRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!org) return;
+    const req = ++reqRef.current;
     setLoading(true);
     setError(null);
     try {
       const [data, sync] = await Promise.all([getRepoStats(org), getSyncStatus(org)]);
+      if (req !== reqRef.current) return;
       setRepos(data);
       setSyncStatus(sync);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Failed to load repository data.");
+    } catch (e: unknown) {
+      if (req !== reqRef.current) return;
+      setError(getApiError(e, "Failed to load repository data."));
     } finally {
-      setLoading(false);
+      if (req === reqRef.current) setLoading(false);
     }
   }, [org]);
 
   useEffect(() => { setUser(getUser()); }, []);
   useEffect(() => { load(); }, [load]);
 
-  const filtered = repos.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () => repos.filter((r) => r.name.toLowerCase().includes(search.toLowerCase())),
+    [repos, search],
   );
-  const top10 = repos.slice(0, 10);
+  const top10 = useMemo(() => repos.slice(0, 10), [repos]);
 
   return (
     <div className="flex flex-col h-full bg-slate-50">

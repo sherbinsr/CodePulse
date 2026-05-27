@@ -11,7 +11,18 @@ interface ReviewTimeChartProps {
 
 const COLORS = ["#6366f1", "#7c3aed", "#8b5cf6", "#a78bfa", "#6d28d9", "#818cf8", "#9333ea", "#c084fc"];
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipPayloadEntry {
+  value: number;
+  fill: string;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+}
+
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const v: number = payload[0].value;
   const display = v < 24 ? `${v.toFixed(1)}h` : `${(v / 24).toFixed(1)}d`;

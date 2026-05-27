@@ -2,10 +2,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { getDigest, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { formatHours } from "@/lib/utils";
+import { formatHours, getApiError } from "@/lib/utils";
 import { Download, FileText, Calendar, Users, GitMerge, Clock } from "lucide-react";
 import type { DigestData, SyncStatus, User } from "@/types";
 
@@ -81,7 +82,7 @@ function DigestPreview({ digest, org }: { digest: DigestData; org: string }) {
                 <div key={c.login} className="flex items-center gap-4 py-2.5 px-4 rounded-xl bg-slate-50">
                   <span className="text-sm font-bold text-slate-400 w-5 text-center">{i + 1}</span>
                   {c.avatar_url ? (
-                    <img src={c.avatar_url} alt={c.login} className="h-8 w-8 rounded-full" />
+                    <Image src={c.avatar_url} alt={c.login} width={32} height={32} className="rounded-full" />
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
                       <span className="text-xs font-bold text-indigo-600">{c.login[0].toUpperCase()}</span>
@@ -150,18 +151,23 @@ function DigestContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const reqRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!org) return;
+    const req = ++reqRef.current;
     setLoading(true);
     setError(null);
     try {
       const [data, sync] = await Promise.all([getDigest(org, period), getSyncStatus(org)]);
+      if (req !== reqRef.current) return;
       setDigest(data);
       setSyncStatus(sync);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Failed to load digest.");
+    } catch (e: unknown) {
+      if (req !== reqRef.current) return;
+      setError(getApiError(e, "Failed to load digest."));
     } finally {
-      setLoading(false);
+      if (req === reqRef.current) setLoading(false);
     }
   }, [org, period]);
 

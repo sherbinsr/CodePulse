@@ -25,6 +25,14 @@ export function stateColor(state: string): string {
   }
 }
 
+export function getApiError(e: unknown, fallback: string): string {
+  if (typeof e === "object" && e !== null && "response" in e) {
+    const detail = (e as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+    if (detail) return detail;
+  }
+  return fallback;
+}
+
 export function relativeTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const diff = Date.now() - new Date(iso).getTime();

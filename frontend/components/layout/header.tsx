@@ -81,6 +81,7 @@ export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderP
             onClick={handleSync}
             disabled={syncing || syncStatus?.status === "running" || syncStatus?.status === "pending"}
             title={syncing ? "Syncing…" : "Sync Now"}
+            aria-label={syncing ? "Syncing…" : "Sync Now"}
             className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors disabled:opacity-40"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />

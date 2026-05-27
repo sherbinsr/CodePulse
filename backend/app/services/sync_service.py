@@ -1,10 +1,13 @@
 """Orchestrates the background sync: GitHub API → repositories → DB."""
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.github_service import GitHubService
 from app.repositories.pr_repository import PRRepository
 from app.repositories.repo_repository import RepoRepository
 from app.repositories.sync_repository import SyncRepository
+from app.repositories.ci_repository import CIRepository
+from app.repositories.commit_repository import CommitRepository
 
 
 class SyncService:
@@ -13,6 +16,8 @@ class SyncService:
         self.pr_repo = PRRepository(db)
         self.repo_repo = RepoRepository(db)
         self.sync_repo = SyncRepository(db)
+        self.ci_repo = CIRepository(db)
+        self.commit_repo = CommitRepository(db)
 
     async def run(self, org: str, token: str, job_id: int) -> None:
         await self.sync_repo.update_status(job_id, "running")

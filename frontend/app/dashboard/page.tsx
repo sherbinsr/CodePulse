@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import Image from "next/image";
@@ -12,7 +12,7 @@ import {
   getOrgOverview, getDeveloperStats, getMonthlyTrends, getSyncStatus, listOrgs,
 } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { formatHours } from "@/lib/utils";
+import { formatHours, getApiError } from "@/lib/utils";
 import type { OrgOverview, DeveloperStat, MonthlyTrend, SyncStatus, User, Org } from "@/types";
 import { GitPullRequest, GitMerge, Clock, Users, Star, BarChart3, Layers, ShieldAlert, Building2 } from "lucide-react";
 
@@ -165,9 +165,12 @@ function DashboardContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const reqRef = useRef(0);
+
   // Load analytics when org is available
   const loadData = useCallback(async () => {
     if (!org) return;
+    const req = ++reqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -177,14 +180,16 @@ function DashboardContent() {
         getMonthlyTrends(org, 6),
         getSyncStatus(org),
       ]);
+      if (req !== reqRef.current) return;
       setOverview(ov);
       setDevStats(devs);
       setTrends(tr);
       setSyncStatus(sync);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Failed to load overview.");
+    } catch (e: unknown) {
+      if (req !== reqRef.current) return;
+      setError(getApiError(e, "Failed to load overview."));
     } finally {
-      setLoading(false);
+      if (req === reqRef.current) setLoading(false);
     }
   }, [org]);
 

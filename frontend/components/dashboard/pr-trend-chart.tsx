@@ -8,18 +8,30 @@ interface PRTrendChartProps {
   data: MonthlyTrend[];
 }
 
-function formatMonth(value: string) {
+interface TooltipPayloadEntry {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+}
+
+function formatMonth(value: string): string {
   const [year, month] = value.split("-");
   const date = new Date(Number(year), Number(month) - 1);
   return date.toLocaleString("default", { month: "short", year: "numeric" });
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-100 px-4 py-3 text-sm">
-      <p className="font-semibold text-slate-700 mb-2">{formatMonth(label)}</p>
-      {payload.map((entry: any) => (
+      <p className="font-semibold text-slate-700 mb-2">{label ? formatMonth(label) : ""}</p>
+      {payload.map((entry) => (
         <div key={entry.name} className="flex items-center gap-2 mb-1">
           <span className="inline-block w-2 h-2 rounded-full" style={{ background: entry.color }} />
           <span className="text-slate-500">{entry.name}:</span>
