@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import { RefreshCw, ChevronDown } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { triggerSync, getSyncStatus } from "@/lib/api";
 import { toast } from "sonner";
 import type { User, SyncStatus } from "@/types";
@@ -12,6 +12,30 @@ interface HeaderProps {
   user: User | null;
   syncStatus?: SyncStatus | null;
   onSyncComplete?: () => void;
+}
+
+function SyncPill({ status }: { status: SyncStatus["status"] | undefined }) {
+  if (!status || status === "never_synced") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+        Never synced
+      </span>
+    );
+  }
+  if (status === "running" || status === "pending") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+        Syncing…
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+      Synced
+    </span>
+  );
 }
 
 export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderProps) {
@@ -45,41 +69,35 @@ export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderP
   };
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-        {syncStatus && syncStatus.status !== "never_synced" && (
-          <p className="text-xs text-slate-400 mt-0.5">
-            {syncStatus.status === "running" || syncStatus.status === "pending"
-              ? "Syncing…"
-              : `Last sync: ${syncStatus.prs_synced?.toLocaleString()} PRs from ${syncStatus.repos_synced} repos`}
-          </p>
-        )}
+    <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+      <div className="flex items-center gap-3">
+        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+        <SyncPill status={syncStatus?.status} />
       </div>
 
       <div className="flex items-center gap-3">
         {org && (
           <button
             onClick={handleSync}
-            disabled={syncing || syncStatus?.status === "running"}
+            disabled={syncing || syncStatus?.status === "running" || syncStatus?.status === "pending"}
             title={syncing ? "Syncing…" : "Sync Now"}
-            className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors disabled:opacity-40"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           </button>
         )}
         {user && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {user.avatar_url ? (
               <Image
                 src={user.avatar_url}
                 alt={user.login}
                 width={32}
                 height={32}
-                className="rounded-full"
+                className="rounded-full ring-2 ring-slate-100"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-sm">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
                 {user.login[0].toUpperCase()}
               </div>
             )}
