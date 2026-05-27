@@ -42,7 +42,9 @@ class AnalyticsRepository:
             select(func.count(PRReview.id)).where(PRReview.org == org)
         )
         unique_contributors = await self.db.scalar(
-            select(func.count(func.distinct(PullRequest.author_login))).where(PullRequest.org == org)
+            select(func.count(func.distinct(PullRequest.author_login))).where(
+                PullRequest.org == org
+            )
         )
         total = total_prs or 0
         merged = merged_prs or 0
@@ -82,7 +84,9 @@ class AnalyticsRepository:
                 PRReview.reviewer_avatar,
                 func.count(PRReview.id).label("reviews_given"),
                 func.sum(case((PRReview.state == "APPROVED", 1), else_=0)).label("approvals"),
-                func.sum(case((PRReview.state == "CHANGES_REQUESTED", 1), else_=0)).label("change_requests"),
+                func.sum(case((PRReview.state == "CHANGES_REQUESTED", 1), else_=0)).label(
+                    "change_requests"
+                ),
             )
             .where(PRReview.org == org)
             .group_by(PRReview.reviewer_login, PRReview.reviewer_avatar)
@@ -101,20 +105,24 @@ class AnalyticsRepository:
             rv = review_map.get(row.author_login, {})
             merged = int(row.merged_prs or 0)
             total = row.total_prs
-            result.append({
-                "login": row.author_login,
-                "avatar_url": row.author_avatar or rv.get("reviewer_avatar"),
-                "total_prs": total,
-                "merged_prs": merged,
-                "open_prs": int(row.open_prs or 0),
-                "merge_rate": round(merged / total * 100, 1) if total else 0.0,
-                "avg_merge_hours": round(row.avg_merge_hours, 1) if row.avg_merge_hours else None,
-                "total_additions": int(row.total_additions or 0),
-                "total_deletions": int(row.total_deletions or 0),
-                "reviews_given": rv.get("reviews_given", 0),
-                "approvals": rv.get("approvals", 0),
-                "change_requests": rv.get("change_requests", 0),
-            })
+            result.append(
+                {
+                    "login": row.author_login,
+                    "avatar_url": row.author_avatar or rv.get("reviewer_avatar"),
+                    "total_prs": total,
+                    "merged_prs": merged,
+                    "open_prs": int(row.open_prs or 0),
+                    "merge_rate": round(merged / total * 100, 1) if total else 0.0,
+                    "avg_merge_hours": round(row.avg_merge_hours, 1)
+                    if row.avg_merge_hours
+                    else None,
+                    "total_additions": int(row.total_additions or 0),
+                    "total_deletions": int(row.total_deletions or 0),
+                    "reviews_given": rv.get("reviews_given", 0),
+                    "approvals": rv.get("approvals", 0),
+                    "change_requests": rv.get("change_requests", 0),
+                }
+            )
         return result
 
     async def get_repo_stats(self, org: str) -> list[dict]:
@@ -139,7 +147,9 @@ class AnalyticsRepository:
                 "total_prs": r.total_prs,
                 "merged_prs": int(r.merged or 0),
                 "open_prs": int(r.open or 0),
-                "merge_rate": round(int(r.merged or 0) / r.total_prs * 100, 1) if r.total_prs else 0.0,
+                "merge_rate": round(int(r.merged or 0) / r.total_prs * 100, 1)
+                if r.total_prs
+                else 0.0,
                 "avg_merge_hours": round(r.avg_merge_hours, 1) if r.avg_merge_hours else None,
                 "avg_review_hours": round(r.avg_review_hours, 1) if r.avg_review_hours else None,
                 "contributors": r.contributors,
@@ -175,19 +185,25 @@ class AnalyticsRepository:
         until = datetime.utcnow()
         period_filter = and_(PullRequest.org == org, PullRequest.created_at >= since)
 
-        total_prs = await self.db.scalar(
-            select(func.count(PullRequest.id)).where(period_filter)
-        ) or 0
-        merged_prs = await self.db.scalar(
-            select(func.count(PullRequest.id)).where(
-                and_(period_filter, PullRequest.state == "MERGED")
+        total_prs = (
+            await self.db.scalar(select(func.count(PullRequest.id)).where(period_filter)) or 0
+        )
+        merged_prs = (
+            await self.db.scalar(
+                select(func.count(PullRequest.id)).where(
+                    and_(period_filter, PullRequest.state == "MERGED")
+                )
             )
-        ) or 0
-        open_prs = await self.db.scalar(
-            select(func.count(PullRequest.id)).where(
-                and_(period_filter, PullRequest.state == "OPEN")
+            or 0
+        )
+        open_prs = (
+            await self.db.scalar(
+                select(func.count(PullRequest.id)).where(
+                    and_(period_filter, PullRequest.state == "OPEN")
+                )
             )
-        ) or 0
+            or 0
+        )
         avg_merge = await self.db.scalar(
             select(func.avg(PullRequest.time_to_merge_hours)).where(
                 and_(period_filter, PullRequest.time_to_merge_hours.isnot(None))
@@ -198,14 +214,20 @@ class AnalyticsRepository:
                 and_(period_filter, PullRequest.time_to_first_review_hours.isnot(None))
             )
         )
-        unique_contributors = await self.db.scalar(
-            select(func.count(func.distinct(PullRequest.author_login))).where(period_filter)
-        ) or 0
-        total_reviews = await self.db.scalar(
-            select(func.count(PRReview.id)).where(
-                and_(PRReview.org == org, PRReview.submitted_at >= since)
+        unique_contributors = (
+            await self.db.scalar(
+                select(func.count(func.distinct(PullRequest.author_login))).where(period_filter)
             )
-        ) or 0
+            or 0
+        )
+        total_reviews = (
+            await self.db.scalar(
+                select(func.count(PRReview.id)).where(
+                    and_(PRReview.org == org, PRReview.submitted_at >= since)
+                )
+            )
+            or 0
+        )
 
         contrib_rows = await self.db.execute(
             select(
@@ -256,7 +278,9 @@ class AnalyticsRepository:
                 "name": r.repo_full_name.split("/")[-1],
                 "total_prs": r.total_prs,
                 "merged_prs": int(r.merged_prs or 0),
-                "merge_rate": round(int(r.merged_prs or 0) / r.total_prs * 100, 1) if r.total_prs else 0.0,
+                "merge_rate": round(int(r.merged_prs or 0) / r.total_prs * 100, 1)
+                if r.total_prs
+                else 0.0,
             }
             for r in repo_rows
         ]

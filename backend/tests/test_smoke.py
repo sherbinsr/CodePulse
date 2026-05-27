@@ -8,6 +8,7 @@ No valid GitHub credentials are required — these tests verify:
   - Public endpoints return correct shapes
   - Invalid auth codes are rejected with 400
 """
+
 import os
 
 import httpx
@@ -17,6 +18,7 @@ BASE = os.getenv("TEST_API_URL", "http://localhost:8000")
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def client():
     with httpx.Client(base_url=BASE, timeout=15) as c:
@@ -24,6 +26,7 @@ def client():
 
 
 # ── Health & meta ─────────────────────────────────────────────────────────────
+
 
 def test_health_ok(client):
     r = client.get("/health")
@@ -51,25 +54,25 @@ def test_openapi_schema_title(client):
 # Every protected endpoint must reject unauthenticated requests with 401.
 
 PROTECTED = [
-    ("GET",  "/api/orgs"),
-    ("GET",  "/api/orgs/acme/sync/status"),
+    ("GET", "/api/orgs"),
+    ("GET", "/api/orgs/acme/sync/status"),
     ("POST", "/api/orgs/acme/sync"),
-    ("GET",  "/api/analytics/acme/overview"),
-    ("GET",  "/api/analytics/acme/developers"),
-    ("GET",  "/api/analytics/acme/trends"),
-    ("GET",  "/api/analytics/acme/repos"),
-    ("GET",  "/api/analytics/acme/prs"),
+    ("GET", "/api/analytics/acme/overview"),
+    ("GET", "/api/analytics/acme/developers"),
+    ("GET", "/api/analytics/acme/trends"),
+    ("GET", "/api/analytics/acme/repos"),
+    ("GET", "/api/analytics/acme/prs"),
 ]
+
 
 @pytest.mark.parametrize("method,path", PROTECTED)
 def test_protected_endpoint_requires_auth(client, method, path):
     r = client.request(method, path)
-    assert r.status_code == 401, (
-        f"{method} {path} → expected 401, got {r.status_code}\n{r.text}"
-    )
+    assert r.status_code == 401, f"{method} {path} → expected 401, got {r.status_code}\n{r.text}"
 
 
 # ── Invalid bearer token ──────────────────────────────────────────────────────
+
 
 def test_invalid_bearer_token_returns_401(client):
     r = client.get("/api/orgs", headers={"Authorization": "Bearer not-a-real-token"})
@@ -77,6 +80,7 @@ def test_invalid_bearer_token_returns_401(client):
 
 
 # ── Auth callback ─────────────────────────────────────────────────────────────
+
 
 def test_github_callback_with_bad_code_returns_400(client):
     r = client.post(
@@ -88,12 +92,14 @@ def test_github_callback_with_bad_code_returns_400(client):
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 
+
 def test_cors_header_present_for_allowed_origin(client):
     r = client.get("/health", headers={"Origin": "http://localhost:3000"})
     assert "access-control-allow-origin" in r.headers
 
 
 # ── 404 for unknown routes ────────────────────────────────────────────────────
+
 
 def test_unknown_route_returns_404(client):
     r = client.get("/api/does-not-exist")

@@ -3,8 +3,6 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.database import AsyncSessionLocal, get_db
 from app.models.user import User
 from app.repositories.sync_repository import SyncRepository
@@ -13,6 +11,7 @@ from app.schemas.organization import OrgOut, SyncStatusOut, SyncTriggerResponse
 from app.services.github_service import GitHubService
 from app.services.sync_service import SyncService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/orgs", tags=["Organizations"])
 
 
@@ -23,7 +22,10 @@ async def list_orgs(current_user: User = Depends(get_current_user)):
     gh = GitHubService(current_user.github_token)
     orgs = await gh.get_user_orgs()
     logger.debug("Found %d orgs for user: %s", len(orgs), current_user.login)
-    return [OrgOut(login=o["login"], avatar_url=o.get("avatar_url"), description=o.get("description")) for o in orgs]
+    return [
+        OrgOut(login=o["login"], avatar_url=o.get("avatar_url"), description=o.get("description"))
+        for o in orgs
+    ]
 
 
 @router.get("/debug")
@@ -37,7 +39,11 @@ async def debug_orgs(current_user: User = Depends(get_current_user)):
         "token_scopes": scopes_resp.get("x-oauth-scopes", "unknown"),
         "user_orgs": [o.get("login") for o in (user_orgs or [])],
         "memberships": [
-            {"org": m.get("organization", {}).get("login"), "state": m.get("state"), "role": m.get("role")}
+            {
+                "org": m.get("organization", {}).get("login"),
+                "state": m.get("state"),
+                "role": m.get("role"),
+            }
             for m in (memberships or [])
         ],
     }
@@ -56,7 +62,9 @@ async def trigger_sync(
     running = await sync_repo.get_running(org)
     if running:
         logger.info("Sync already running for org: %s (job_id=%d)", org, running.id)
-        return SyncTriggerResponse(job_id=running.id, status=running.status, message="Sync already in progress")
+        return SyncTriggerResponse(
+            job_id=running.id, status=running.status, message="Sync already in progress"
+        )
 
     job = await sync_repo.create(org=org, triggered_by=current_user.login)
     logger.info("Sync job %d created for org: %s by user: %s", job.id, org, current_user.login)

@@ -2,8 +2,8 @@ from app.schemas.analytics import (
     DeveloperStatOut,
     MonthlyTrendOut,
     OrgOverviewOut,
-    ReviewNetworkOut,
     RepoStatOut,
+    ReviewNetworkOut,
 )
 from app.schemas.auth import AuthCallbackRequest, AuthResponse, UserOut
 from app.schemas.organization import OrgOut, SyncStatusOut, SyncTriggerResponse

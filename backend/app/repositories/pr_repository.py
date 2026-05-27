@@ -11,9 +11,7 @@ class PRRepository:
         self.db = db
 
     async def delete_by_repo(self, repo_full_name: str) -> None:
-        await self.db.execute(
-            delete(PRReview).where(PRReview.repo_full_name == repo_full_name)
-        )
+        await self.db.execute(delete(PRReview).where(PRReview.repo_full_name == repo_full_name))
         await self.db.execute(
             delete(PullRequest).where(PullRequest.repo_full_name == repo_full_name)
         )

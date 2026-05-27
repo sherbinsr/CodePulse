@@ -3,8 +3,6 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.pr_repository import PRRepository
 from app.schemas.analytics import (
@@ -19,10 +17,12 @@ from app.schemas.analytics import (
     FlakyWorkflowOut,
     MonthlyTrendOut,
     OrgOverviewOut,
-    ReviewNetworkOut,
     RepoStatOut,
+    ReviewNetworkOut,
 )
 from app.schemas.pull_request import PRListResponse, PullRequestOut
+
+logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
@@ -55,13 +55,14 @@ class AnalyticsService:
     async def get_digest(self, org: str, period: str) -> DigestOut:
         logger.debug("Fetching digest for org: %s, period: %s", org, period)
         from datetime import datetime, timedelta
+
         period_map = {
-            "1w": (7,   "Last 1 Week"),
-            "2w": (14,  "Last 2 Weeks"),
-            "3w": (21,  "Last 3 Weeks"),
-            "1m": (30,  "Last 1 Month"),
-            "2m": (60,  "Last 2 Months"),
-            "3m": (90,  "Last 3 Months"),
+            "1w": (7, "Last 1 Week"),
+            "2w": (14, "Last 2 Weeks"),
+            "3w": (21, "Last 3 Weeks"),
+            "1m": (30, "Last 1 Month"),
+            "2m": (60, "Last 2 Months"),
+            "3m": (90, "Last 3 Months"),
             "6m": (180, "Last 6 Months"),
         }
         days, label = period_map.get(period, (30, "Last 1 Month"))
@@ -79,26 +80,31 @@ class AnalyticsService:
 
     async def get_ci_summary(self, org: str) -> list:
         from app.repositories.ci_repository import CIRepository
+
         rows = await CIRepository(self.analytics_repo.db).get_ci_summary(org)
         return [CISummaryOut(**r) for r in rows]
 
     async def get_build_trends(self, org: str) -> list:
         from app.repositories.ci_repository import CIRepository
+
         rows = await CIRepository(self.analytics_repo.db).get_build_trends(org)
         return [BuildTrendOut(**r) for r in rows]
 
     async def get_flaky_workflows(self, org: str) -> list:
         from app.repositories.ci_repository import CIRepository
+
         rows = await CIRepository(self.analytics_repo.db).get_flaky_workflows(org)
         return [FlakyWorkflowOut(**r) for r in rows]
 
     async def get_commit_activity(self, org: str) -> list:
         from app.repositories.commit_repository import CommitRepository
+
         rows = await CommitRepository(self.analytics_repo.db).get_commit_activity(org)
         return [CommitActivityOut(**r) for r in rows]
 
     async def get_code_churn(self, org: str) -> list:
         from app.repositories.commit_repository import CommitRepository
+
         rows = await CommitRepository(self.analytics_repo.db).get_code_churn(org)
         return [CodeChurnOut(**r) for r in rows]
 
@@ -117,7 +123,12 @@ class AnalyticsService:
     ) -> PRListResponse:
         logger.debug(
             "Fetching PR list for org=%s repo=%s author=%s state=%s limit=%d offset=%d",
-            org, repo, author, state, limit, offset,
+            org,
+            repo,
+            author,
+            state,
+            limit,
+            offset,
         )
         prs, total = await self.pr_repo.list_prs(org, repo, author, state, limit, offset)
         logger.info("PR list: %d/%d PRs returned for org: %s", len(prs), total, org)

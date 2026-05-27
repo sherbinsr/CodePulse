@@ -13,10 +13,7 @@ class SyncRepository:
 
     async def get_latest(self, org: str) -> Optional[SyncJob]:
         result = await self.db.execute(
-            select(SyncJob)
-            .where(SyncJob.org == org)
-            .order_by(SyncJob.started_at.desc())
-            .limit(1)
+            select(SyncJob).where(SyncJob.org == org).order_by(SyncJob.started_at.desc()).limit(1)
         )
         return result.scalar_one_or_none()
 

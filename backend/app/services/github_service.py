@@ -1,4 +1,5 @@
 """GitHub API client: REST + GraphQL."""
+
 import logging
 from datetime import datetime
 from typing import Any, Optional
@@ -76,7 +77,10 @@ class GitHubService:
         }
 
     async def _graphql(self, query: str, variables: dict) -> dict:
-        logger.debug("GraphQL request with variables: %s", {k: v for k, v in variables.items() if k != "token"})
+        logger.debug(
+            "GraphQL request with variables: %s",
+            {k: v for k, v in variables.items() if k != "token"},
+        )
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
                 settings.github_graphql_url,
@@ -146,16 +150,20 @@ class GitHubService:
 
         # 3. Orgs where the user is only an outside collaborator — these are
         #    invisible to the membership endpoints but appear in their repo list
-        repos = await self._rest_get_paginated("/user/repos", {"affiliation": "collaborator", "sort": "updated"})
+        repos = await self._rest_get_paginated(
+            "/user/repos", {"affiliation": "collaborator", "sort": "updated"}
+        )
         for repo in repos:
             owner = repo.get("owner", {})
             if owner.get("type") == "Organization" and owner.get("login") not in seen:
                 seen.add(owner["login"])
-                orgs_list.append({
-                    "login": owner["login"],
-                    "avatar_url": owner.get("avatar_url"),
-                    "description": None,
-                })
+                orgs_list.append(
+                    {
+                        "login": owner["login"],
+                        "avatar_url": owner.get("avatar_url"),
+                        "description": None,
+                    }
+                )
 
         return orgs_list
 
@@ -170,7 +178,9 @@ class GitHubService:
             data = await self._graphql(PR_ANALYTICS_QUERY, {"org": org, "repoCursor": cursor})
             nodes = data["organization"]["repositories"]["nodes"]
             all_repos.extend(nodes)
-            logger.debug("Fetched page %d: %d repos (total so far: %d)", page, len(nodes), len(all_repos))
+            logger.debug(
+                "Fetched page %d: %d repos (total so far: %d)", page, len(nodes), len(all_repos)
+            )
             page_info = data["organization"]["repositories"]["pageInfo"]
             if not page_info["hasNextPage"]:
                 break
@@ -202,7 +212,9 @@ class GitHubService:
                     {"per_page": 100, "page": page, "status": "completed"},
                 )
             except Exception as exc:
-                logger.warning("Failed to fetch workflow runs for %s (page %d): %s", repo_full_name, page, exc)
+                logger.warning(
+                    "Failed to fetch workflow runs for %s (page %d): %s", repo_full_name, page, exc
+                )
                 break
             batch = data.get("workflow_runs", []) if isinstance(data, dict) else []
             if not batch:

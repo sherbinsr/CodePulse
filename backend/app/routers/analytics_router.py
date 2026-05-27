@@ -4,8 +4,6 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.database import get_db
 from app.models.user import User
 from app.routers.deps import get_current_user
@@ -19,12 +17,13 @@ from app.schemas.analytics import (
     FlakyWorkflowOut,
     MonthlyTrendOut,
     OrgOverviewOut,
-    ReviewNetworkOut,
     RepoStatOut,
+    ReviewNetworkOut,
 )
 from app.schemas.pull_request import PRListResponse
 from app.services.analytics_service import AnalyticsService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 

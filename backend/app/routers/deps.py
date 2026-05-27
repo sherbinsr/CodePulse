@@ -1,4 +1,5 @@
 """Shared FastAPI dependencies."""
+
 import logging
 from typing import Optional
 

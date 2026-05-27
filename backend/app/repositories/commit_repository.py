@@ -46,18 +46,20 @@ class CommitRepository:
             after_hours_n = int(r.after_hours_commits or 0)
             weekend_n = int(r.weekend_commits or 0)
             active = r.active_days or 1
-            result.append({
-                "author_login": r.author_login,
-                "author_avatar": r.author_avatar,
-                "total_commits": total,
-                "active_days": r.active_days,
-                "commits_per_active_day": round(total / active, 1),
-                "after_hours_commits": after_hours_n,
-                "weekend_commits": weekend_n,
-                "after_hours_pct": round(after_hours_n / total * 100, 1) if total else 0.0,
-                "weekend_pct": round(weekend_n / total * 100, 1) if total else 0.0,
-                "repos_contributed": r.repos_contributed,
-            })
+            result.append(
+                {
+                    "author_login": r.author_login,
+                    "author_avatar": r.author_avatar,
+                    "total_commits": total,
+                    "active_days": r.active_days,
+                    "commits_per_active_day": round(total / active, 1),
+                    "after_hours_commits": after_hours_n,
+                    "weekend_commits": weekend_n,
+                    "after_hours_pct": round(after_hours_n / total * 100, 1) if total else 0.0,
+                    "weekend_pct": round(weekend_n / total * 100, 1) if total else 0.0,
+                    "repos_contributed": r.repos_contributed,
+                }
+            )
         return result
 
     async def get_code_churn(self, org: str) -> list[dict]:

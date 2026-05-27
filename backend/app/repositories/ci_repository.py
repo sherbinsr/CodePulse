@@ -11,7 +11,9 @@ class CIRepository:
         self.db = db
 
     async def delete_by_repo(self, repo_full_name: str) -> None:
-        await self.db.execute(delete(WorkflowRun).where(WorkflowRun.repo_full_name == repo_full_name))
+        await self.db.execute(
+            delete(WorkflowRun).where(WorkflowRun.repo_full_name == repo_full_name)
+        )
 
     async def bulk_insert(self, runs: list[dict]) -> None:
         if runs:
@@ -22,13 +24,26 @@ class CIRepository:
             select(
                 WorkflowRun.repo_full_name,
                 func.count(WorkflowRun.id).label("total_runs"),
-                func.sum(case((WorkflowRun.conclusion == "success", 1), else_=0)).label("successful_runs"),
-                func.sum(case((WorkflowRun.conclusion == "failure", 1), else_=0)).label("failed_runs"),
+                func.sum(case((WorkflowRun.conclusion == "success", 1), else_=0)).label(
+                    "successful_runs"
+                ),
+                func.sum(case((WorkflowRun.conclusion == "failure", 1), else_=0)).label(
+                    "failed_runs"
+                ),
                 func.sum(
-                    case((and_(WorkflowRun.run_attempt == 1, WorkflowRun.conclusion == "success"), 1), else_=0)
+                    case(
+                        (
+                            and_(WorkflowRun.run_attempt == 1, WorkflowRun.conclusion == "success"),
+                            1,
+                        ),
+                        else_=0,
+                    )
                 ).label("first_try_success"),
                 func.avg(
-                    case((WorkflowRun.conclusion == "success", WorkflowRun.duration_seconds), else_=None)
+                    case(
+                        (WorkflowRun.conclusion == "success", WorkflowRun.duration_seconds),
+                        else_=None,
+                    )
                 ).label("avg_duration_seconds"),
             )
             .where(and_(WorkflowRun.org == org, WorkflowRun.status == "completed"))
@@ -42,9 +57,15 @@ class CIRepository:
                 "total_runs": r.total_runs,
                 "successful_runs": int(r.successful_runs or 0),
                 "failed_runs": int(r.failed_runs or 0),
-                "first_try_pass_rate": round(int(r.first_try_success or 0) / r.total_runs * 100, 1) if r.total_runs else 0.0,
-                "overall_pass_rate": round(int(r.successful_runs or 0) / r.total_runs * 100, 1) if r.total_runs else 0.0,
-                "avg_duration_seconds": round(r.avg_duration_seconds, 0) if r.avg_duration_seconds else None,
+                "first_try_pass_rate": round(int(r.first_try_success or 0) / r.total_runs * 100, 1)
+                if r.total_runs
+                else 0.0,
+                "overall_pass_rate": round(int(r.successful_runs or 0) / r.total_runs * 100, 1)
+                if r.total_runs
+                else 0.0,
+                "avg_duration_seconds": round(r.avg_duration_seconds, 0)
+                if r.avg_duration_seconds
+                else None,
             }
             for r in rows
         ]
@@ -59,12 +80,14 @@ class CIRepository:
                 func.avg(WorkflowRun.duration_seconds).label("avg_duration_seconds"),
                 func.count(WorkflowRun.id).label("run_count"),
             )
-            .where(and_(
-                WorkflowRun.org == org,
-                WorkflowRun.conclusion == "success",
-                WorkflowRun.duration_seconds.isnot(None),
-                WorkflowRun.created_at >= since,
-            ))
+            .where(
+                and_(
+                    WorkflowRun.org == org,
+                    WorkflowRun.conclusion == "success",
+                    WorkflowRun.duration_seconds.isnot(None),
+                    WorkflowRun.created_at >= since,
+                )
+            )
             .group_by(text("week"), WorkflowRun.repo_full_name)
             .order_by(text("week"))
         )
@@ -72,7 +95,9 @@ class CIRepository:
             {
                 "week": r.week.strftime("%Y-%m-%d") if r.week else "",
                 "repo_name": r.repo_full_name.split("/")[-1],
-                "avg_duration_seconds": round(r.avg_duration_seconds, 0) if r.avg_duration_seconds else 0.0,
+                "avg_duration_seconds": round(r.avg_duration_seconds, 0)
+                if r.avg_duration_seconds
+                else 0.0,
                 "run_count": r.run_count,
             }
             for r in rows
@@ -80,7 +105,9 @@ class CIRepository:
 
     async def get_flaky_workflows(self, org: str) -> list[dict]:
         flaky_expr = func.sum(
-            case((and_(WorkflowRun.run_attempt > 1, WorkflowRun.conclusion == "success"), 1), else_=0)
+            case(
+                (and_(WorkflowRun.run_attempt > 1, WorkflowRun.conclusion == "success"), 1), else_=0
+            )
         )
         rows = await self.db.execute(
             select(
@@ -101,7 +128,9 @@ class CIRepository:
                 "repo_name": r.repo_full_name.split("/")[-1],
                 "flaky_count": int(r.flaky_count or 0),
                 "total_runs": r.total_runs,
-                "flakiness_rate": round(int(r.flaky_count or 0) / r.total_runs * 100, 1) if r.total_runs else 0.0,
+                "flakiness_rate": round(int(r.flaky_count or 0) / r.total_runs * 100, 1)
+                if r.total_runs
+                else 0.0,
             }
             for r in rows
         ]

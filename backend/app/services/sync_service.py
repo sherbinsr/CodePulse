@@ -1,11 +1,10 @@
 """Orchestrates the background sync: GitHub API → repositories → DB."""
+
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger(__name__)
 
 from app.repositories.ci_repository import CIRepository
 from app.repositories.commit_repository import CommitRepository
@@ -14,9 +13,12 @@ from app.repositories.repo_repository import RepoRepository
 from app.repositories.sync_repository import SyncRepository
 from app.services.github_service import GitHubService
 
+logger = logging.getLogger(__name__)
+
 
 def _run_duration(r: dict) -> Optional[int]:
     from app.services.github_service import GitHubService
+
     created = GitHubService.parse_datetime(r.get("created_at"))
     updated = GitHubService.parse_datetime(r.get("updated_at"))
     if created and updated:
@@ -42,7 +44,9 @@ class SyncService:
 
         try:
             repo_nodes = await gh.fetch_org_repos_with_prs(org)
-            logger.info("Sync job %d: processing %d repos for org: %s", job_id, len(repo_nodes), org)
+            logger.info(
+                "Sync job %d: processing %d repos for org: %s", job_id, len(repo_nodes), org
+            )
 
             for node in repo_nodes:
                 full_name = node["nameWithOwner"]
@@ -126,30 +130,34 @@ class SyncService:
                     await self.ci_repo.delete_by_repo(full_name)
                     if runs_data:
                         now = datetime.utcnow()
-                        await self.ci_repo.bulk_insert([
-                            {
-                                "github_run_id": r["id"],
-                                "repo_full_name": full_name,
-                                "org": org,
-                                "workflow_name": r.get("name", ""),
-                                "status": r.get("status", ""),
-                                "conclusion": r.get("conclusion"),
-                                "head_branch": r.get("head_branch"),
-                                "run_attempt": r.get("run_attempt", 1),
-                                "duration_seconds": _run_duration(r),
-                                "created_at": gh.parse_datetime(r["created_at"]) or now,
-                                "synced_at": now,
-                            }
-                            for r in runs_data
-                            if r.get("created_at")
-                        ])
+                        await self.ci_repo.bulk_insert(
+                            [
+                                {
+                                    "github_run_id": r["id"],
+                                    "repo_full_name": full_name,
+                                    "org": org,
+                                    "workflow_name": r.get("name", ""),
+                                    "status": r.get("status", ""),
+                                    "conclusion": r.get("conclusion"),
+                                    "head_branch": r.get("head_branch"),
+                                    "run_attempt": r.get("run_attempt", 1),
+                                    "duration_seconds": _run_duration(r),
+                                    "created_at": gh.parse_datetime(r["created_at"]) or now,
+                                    "synced_at": now,
+                                }
+                                for r in runs_data
+                                if r.get("created_at")
+                            ]
+                        )
                         logger.debug("Inserted %d CI runs for %s", len(runs_data), full_name)
                 except Exception as exc:
                     logger.error("CI sync failed for %s (non-fatal): %s", full_name, exc)
 
                 # Sync commits (last 90 days, supplementary — failures are non-fatal)
                 try:
-                    since_iso = (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    since_iso = (datetime.utcnow() - timedelta(days=90)).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    )
                     commits_data = await gh.fetch_commits(full_name, since_iso)
                     await self.commit_repo.delete_by_repo(full_name)
                     if commits_data:
@@ -161,31 +169,48 @@ class SyncService:
                             if not committed_at:
                                 continue
                             author_gh = c.get("author") or {}
-                            rows.append({
-                                "sha": c["sha"],
-                                "repo_full_name": full_name,
-                                "org": org,
-                                "author_login": author_gh.get("login"),
-                                "author_avatar": author_gh.get("avatar_url"),
-                                "author_name": c.get("commit", {}).get("author", {}).get("name", ""),
-                                "committed_at": committed_at,
-                                "synced_at": now,
-                            })
+                            rows.append(
+                                {
+                                    "sha": c["sha"],
+                                    "repo_full_name": full_name,
+                                    "org": org,
+                                    "author_login": author_gh.get("login"),
+                                    "author_avatar": author_gh.get("avatar_url"),
+                                    "author_name": c.get("commit", {})
+                                    .get("author", {})
+                                    .get("name", ""),
+                                    "committed_at": committed_at,
+                                    "synced_at": now,
+                                }
+                            )
                         await self.commit_repo.bulk_insert(rows)
                         logger.debug("Inserted %d commits for %s", len(rows), full_name)
                 except Exception as exc:
                     logger.error("Commit sync failed for %s (non-fatal): %s", full_name, exc)
 
                 repos_synced += 1
-                logger.info("Sync job %d: completed repo %s (%d/%d)", job_id, full_name, repos_synced, len(repo_nodes))
+                logger.info(
+                    "Sync job %d: completed repo %s (%d/%d)",
+                    job_id,
+                    full_name,
+                    repos_synced,
+                    len(repo_nodes),
+                )
                 await self.db.commit()
 
             await self.sync_repo.update_status(
-                job_id, "done",
+                job_id,
+                "done",
                 repos_synced=repos_synced,
                 prs_synced=prs_synced,
             )
-            logger.info("Sync job %d completed: %d repos, %d PRs synced for org: %s", job_id, repos_synced, prs_synced, org)
+            logger.info(
+                "Sync job %d completed: %d repos, %d PRs synced for org: %s",
+                job_id,
+                repos_synced,
+                prs_synced,
+                org,
+            )
 
         except Exception as exc:
             logger.error("Sync job %d failed for org %s: %s", job_id, org, exc, exc_info=True)
