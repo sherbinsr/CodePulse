@@ -8,11 +8,17 @@ interface PRTrendChartProps {
   data: MonthlyTrend[];
 }
 
+function formatMonth(value: string) {
+  const [year, month] = value.split("-");
+  const date = new Date(Number(year), Number(month) - 1);
+  return date.toLocaleString("default", { month: "short", year: "numeric" });
+}
+
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-100 px-4 py-3 text-sm">
-      <p className="font-semibold text-slate-700 mb-2">{label}</p>
+      <p className="font-semibold text-slate-700 mb-2">{formatMonth(label)}</p>
       {payload.map((entry: any) => (
         <div key={entry.name} className="flex items-center gap-2 mb-1">
           <span className="inline-block w-2 h-2 rounded-full" style={{ background: entry.color }} />
@@ -41,7 +47,7 @@ export function PRTrendChart({ data }: PRTrendChartProps) {
         </div>
       </div>
       <ResponsiveContainer width="100%" height={280}>
-        <AreaChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
+        <AreaChart data={data} margin={{ top: 4, right: 8, bottom: 32, left: -16 }}>
           <defs>
             <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#6366f1" stopOpacity={0.18} />
@@ -55,9 +61,11 @@ export function PRTrendChart({ data }: PRTrendChartProps) {
           <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
           <XAxis
             dataKey="month"
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tickFormatter={formatMonth}
+            tick={{ fontSize: 11, fill: "#94a3b8", dy: 12 }}
             axisLine={false}
             tickLine={false}
+            padding={{ left: 24, right: 8 }}
           />
           <YAxis
             tick={{ fontSize: 11, fill: "#94a3b8" }}

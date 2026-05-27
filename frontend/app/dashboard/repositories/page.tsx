@@ -128,7 +128,6 @@ function RepositoriesContent() {
                     tickLine={false}
                   />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
-                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
                   <Bar
                     dataKey="merged_prs"
                     name="Merged"
@@ -144,6 +143,16 @@ function RepositoriesContent() {
                   />
                 </BarChart>
               </ResponsiveContainer>
+              <div className="flex items-center justify-center gap-6 mt-4">
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                  Merged
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  Open
+                </span>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
