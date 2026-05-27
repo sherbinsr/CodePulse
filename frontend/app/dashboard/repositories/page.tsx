@@ -15,8 +15,8 @@ import {
 function EmptyState({ org, onSync }: { org: string; onSync: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-64 text-center gap-4">
-      <p className="text-slate-500">No repository data found for <strong>{org}</strong>.</p>
-      <p className="text-sm text-slate-400">Click <strong>Sync Now</strong> in the header to fetch data from GitHub.</p>
+      <p className="text-slate-500 dark:text-slate-400">No repository data found for <strong>{org}</strong>.</p>
+      <p className="text-sm text-slate-400 dark:text-slate-500">Click <strong>Sync Now</strong> in the header to fetch data from GitHub.</p>
     </div>
   );
 }
@@ -36,13 +36,13 @@ interface ChartTooltipProps {
 function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-100 px-4 py-3 text-sm">
-      <p className="font-semibold text-slate-700 mb-2">{label}</p>
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 px-4 py-3 text-sm">
+      <p className="font-semibold text-slate-700 dark:text-slate-200 mb-2">{label}</p>
       {payload.map((entry) => (
         <div key={entry.name} className="flex items-center gap-2 mb-1">
           <span className="inline-block w-2 h-2 rounded-full" style={{ background: entry.fill }} />
-          <span className="text-slate-500">{entry.name}:</span>
-          <span className="font-semibold text-slate-800">{entry.value}</span>
+          <span className="text-slate-500 dark:text-slate-400">{entry.name}:</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.value}</span>
         </div>
       ))}
     </div>
@@ -88,7 +88,7 @@ function RepositoriesContent() {
   const top10 = useMemo(() => repos.slice(0, 10), [repos]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
       <Header
         title="Repository Analytics"
         org={org}
@@ -98,7 +98,7 @@ function RepositoriesContent() {
       />
       <div className="flex-1 p-6 overflow-auto space-y-6">
         {!org && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-slate-600 text-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 text-slate-600 dark:text-slate-300 text-sm">
             No organization selected. Go back to the overview and select one.
           </div>
         )}
@@ -121,8 +121,8 @@ function RepositoriesContent() {
 
         {!loading && !error && repos.length > 0 && (
           <>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-              <h3 className="font-semibold text-slate-800 mb-5">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-5">
                 PR Volume by Repository (Top 10)
               </h3>
               <ResponsiveContainer width="100%" height={280}>
@@ -161,20 +161,20 @@ function RepositoriesContent() {
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex items-center justify-center gap-6 mt-4">
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" />
                   Merged
                 </span>
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   Open
                 </span>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-800">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="font-semibold text-slate-800 dark:text-slate-100">
                   All Repositories <span className="text-slate-400 font-normal">({repos.length})</span>
                 </h3>
                 <input
@@ -182,27 +182,27 @@ function RepositoriesContent() {
                   placeholder="Search repos…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-slate-50"
+                  className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Repository</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Total PRs</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Merged</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Merge %</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Avg Merge</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Avg Review</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Contributors</th>
+                  <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Repository</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Total PRs</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Merged</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Open</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Merge %</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Avg Merge</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Avg Review</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Contributors</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                   {filtered.map((r) => (
-                    <tr key={r.repo} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-slate-800">{r.name}</td>
-                      <td className="px-4 py-3.5 text-right text-slate-700">{r.total_prs}</td>
+                    <tr key={r.repo} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                      <td className="px-6 py-3.5 font-medium text-slate-800 dark:text-slate-200">{r.name}</td>
+                      <td className="px-4 py-3.5 text-right text-slate-700 dark:text-slate-300">{r.total_prs}</td>
                       <td className="px-4 py-3.5 text-right text-indigo-600 font-medium">{r.merged_prs}</td>
                       <td className="px-4 py-3.5 text-right text-emerald-600 font-medium">{r.open_prs}</td>
                       <td className="px-4 py-3.5 text-right">
@@ -210,9 +210,9 @@ function RepositoriesContent() {
                           {r.merge_rate}%
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-right text-slate-500">{formatHours(r.avg_merge_hours)}</td>
-                      <td className="px-4 py-3.5 text-right text-slate-500">{formatHours(r.avg_review_hours)}</td>
-                      <td className="px-4 py-3.5 text-right text-slate-700">{r.contributors}</td>
+                      <td className="px-4 py-3.5 text-right text-slate-500 dark:text-slate-400">{formatHours(r.avg_merge_hours)}</td>
+                      <td className="px-4 py-3.5 text-right text-slate-500 dark:text-slate-400">{formatHours(r.avg_review_hours)}</td>
+                      <td className="px-4 py-3.5 text-right text-slate-700 dark:text-slate-300">{r.contributors}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -227,7 +227,7 @@ function RepositoriesContent() {
 
 export default function RepositoriesPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-64 bg-slate-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-64 bg-slate-50 dark:bg-slate-950"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
       <RepositoriesContent />
     </Suspense>
   );

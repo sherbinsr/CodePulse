@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Org } from "@/types";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface NavItem {
   href: string;
@@ -136,8 +137,9 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
           })}
         </nav>
 
-        {/* Sign out */}
-        <div className="px-3 py-3 border-t border-slate-800 sticky bottom-0 bg-slate-900 shrink-0">
+        {/* Sign out + Theme toggle */}
+        <div className="px-3 py-3 border-t border-slate-800 sticky bottom-0 bg-slate-900 shrink-0 space-y-0.5">
+          <ThemeToggle />
           <button
             onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

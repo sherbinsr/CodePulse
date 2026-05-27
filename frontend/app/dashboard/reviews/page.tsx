@@ -12,7 +12,7 @@ import type { DeveloperStat, ReviewNetwork, SyncStatus, User } from "@/types";
 // ── Heatmap ───────────────────────────────────────────────────────────────────
 
 function cellColor(count: number, max: number): string {
-  if (count === 0 || max === 0) return "bg-slate-50 text-slate-300";
+  if (count === 0 || max === 0) return "bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600";
   const ratio = count / max;
   if (ratio >= 0.75) return "bg-emerald-600 text-white";
   if (ratio >= 0.5)  return "bg-emerald-400 text-white";
@@ -23,7 +23,6 @@ function cellColor(count: number, max: number): string {
 function ReviewHeatmap({ network }: { network: ReviewNetwork[] }) {
   const [tooltip, setTooltip] = useState<{ author: string; reviewer: string; count: number; x: number; y: number } | null>(null);
 
-  // derive top authors and reviewers by total activity
   const authorTotals: Record<string, number> = {};
   const reviewerTotals: Record<string, number> = {};
   const matrix: Record<string, Record<string, number>> = {};
@@ -50,9 +49,9 @@ function ReviewHeatmap({ network }: { network: ReviewNetwork[] }) {
   if (authors.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
       <div className="mb-5">
-        <h3 className="font-semibold text-slate-800">Review Heatmap</h3>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100">Review Heatmap</h3>
         <p className="text-xs text-slate-400 mt-1">
           Rows = PR authors · Columns = reviewers · Color intensity = review count
         </p>
@@ -90,7 +89,7 @@ function ReviewHeatmap({ network }: { network: ReviewNetwork[] }) {
             <div key={author} className="flex items-center mb-1">
               {/* Row label */}
               <div className="w-32 flex-shrink-0 pr-3 text-right">
-                <span className="text-xs font-medium text-slate-600 truncate block">{author}</span>
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate block">{author}</span>
               </div>
 
               {/* Cells */}
@@ -116,7 +115,7 @@ function ReviewHeatmap({ network }: { network: ReviewNetwork[] }) {
                     <div
                       className={`w-10 h-9 rounded-md flex items-center justify-center text-[11px] font-semibold transition-all ${
                         isSelf
-                          ? "bg-slate-100 text-slate-300"
+                          ? "bg-slate-100 dark:bg-slate-700 text-slate-300 dark:text-slate-500"
                           : cellColor(count, max)
                       }`}
                     >
@@ -202,7 +201,7 @@ function ReviewsContent() {
   );
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
       <Header title="Review Analytics" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
       <div className="flex-1 p-6 overflow-auto space-y-6">
         {error && (
@@ -217,16 +216,16 @@ function ReviewsContent() {
 
         {!loading && !error && org && devs.length === 0 && (
           <div className="flex flex-col items-center justify-center h-64 text-center gap-2">
-            <p className="text-slate-500">No review data found for <strong>{org}</strong>.</p>
-            <p className="text-sm text-slate-400">Click <strong>Sync Now</strong> to fetch data from GitHub.</p>
+            <p className="text-slate-500 dark:text-slate-400">No review data found for <strong>{org}</strong>.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">Click <strong>Sync Now</strong> to fetch data from GitHub.</p>
           </div>
         )}
 
         {!loading && !error && devs.length > 0 && (
           <>
             {/* Top reviewers */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-              <h3 className="font-semibold text-slate-800 mb-5">Top Reviewers</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-5">Top Reviewers</h3>
               <div className="space-y-3">
                 {topReviewers.map((dev, idx) => (
                   <div key={dev.login} className="flex items-center gap-4">
@@ -234,19 +233,19 @@ function ReviewsContent() {
                     {dev.avatar_url ? (
                       <Image src={dev.avatar_url} alt={dev.login} width={28} height={28} className="rounded-full" />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-xs font-bold text-indigo-600">
                         {dev.login[0].toUpperCase()}
                       </div>
                     )}
-                    <span className="font-medium text-slate-800 text-sm w-32 truncate">{dev.login}</span>
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <span className="font-medium text-slate-800 dark:text-slate-200 text-sm w-32 truncate">{dev.login}</span>
+                    <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-indigo-500 rounded-full"
                         style={{ width: `${(dev.reviews_given / (topReviewers[0]?.reviews_given || 1)) * 100}%` }}
                       />
                     </div>
                     <div className="flex items-center gap-4 text-sm w-44 justify-end">
-                      <span className="text-slate-700 font-medium">{dev.reviews_given} reviews</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">{dev.reviews_given} reviews</span>
                       <span className="text-emerald-600 font-medium">{dev.approvals} ✓</span>
                       <span className="text-amber-600 font-medium">{dev.change_requests} △</span>
                     </div>
@@ -259,28 +258,28 @@ function ReviewsContent() {
             {network.length > 0 && <ReviewHeatmap network={network} />}
 
             {/* Review participation */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-              <h3 className="font-semibold text-slate-800 mb-5">Review Participation</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-5">Review Participation</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {devs.map((dev) => {
                   const total = dev.total_prs + dev.reviews_given;
                   const participation = total > 0 ? Math.round((dev.reviews_given / total) * 100) : 0;
                   return (
-                    <div key={dev.login} className="bg-slate-50 rounded-xl p-3 flex flex-col gap-2">
+                    <div key={dev.login} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         {dev.avatar_url ? (
                           <Image src={dev.avatar_url} alt={dev.login} width={20} height={20} className="rounded-full" />
                         ) : (
-                          <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
+                          <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-xs font-bold text-indigo-600">
                             {dev.login[0].toUpperCase()}
                           </div>
                         )}
-                        <span className="text-xs font-medium text-slate-700 truncate">{dev.login}</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{dev.login}</span>
                       </div>
-                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${participation}%` }} />
                       </div>
-                      <div className="flex justify-between text-xs text-slate-500">
+                      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                         <span>{dev.reviews_given} given</span>
                         <span className="font-medium">{participation}%</span>
                       </div>
@@ -298,7 +297,7 @@ function ReviewsContent() {
 
 export default function ReviewsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-64 bg-slate-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-64 bg-slate-50 dark:bg-slate-950"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
       <ReviewsContent />
     </Suspense>
   );

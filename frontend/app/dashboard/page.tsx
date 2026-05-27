@@ -28,23 +28,23 @@ function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) 
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-xl mx-auto mt-16">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-8 text-center max-w-xl mx-auto mt-16">
       <div className="flex justify-center mb-5">
         <div className="bg-indigo-50 rounded-2xl p-4 ring-1 ring-indigo-100">
           <ShieldAlert className="h-8 w-8 text-indigo-600" />
         </div>
       </div>
-      <h2 className="text-xl font-semibold text-slate-900 mb-2">No Organization Access</h2>
-      <p className="text-slate-500 text-sm mb-5">
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">No Organization Access</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">
         CodePulse couldn't find any GitHub organizations linked to your account.
         This happens for one of two reasons:
       </p>
 
-      <div className="text-left bg-slate-50 rounded-xl p-5 mb-6 space-y-4">
+      <div className="text-left bg-slate-50 dark:bg-slate-800 rounded-xl p-5 mb-6 space-y-4">
         <div className="flex gap-3">
           <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
           <div>
-            <p className="text-sm font-medium text-slate-800">Re-authorize CodePulse with org access</p>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Re-authorize CodePulse with org access</p>
             <p className="text-xs text-slate-500 mt-0.5">
               Click the button below to re-authorize and grant the <code className="bg-slate-200 px-1 rounded">read:org</code> permission.
             </p>
@@ -108,15 +108,15 @@ function OrgSelector({ orgs, onSelect }: { orgs: Org[]; onSelect: (org: string) 
   return (
     <div className="max-w-2xl mx-auto mt-12">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-semibold text-slate-900 mb-2">Select an Organization</h2>
-        <p className="text-slate-500 text-sm">Choose an organization to view analytics</p>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-2">Select an Organization</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Choose an organization to view analytics</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {orgs.map((org) => (
           <button
             key={org.login}
             onClick={() => onSelect(org.login)}
-            className="flex items-center gap-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-indigo-300 hover:shadow-md p-5 text-left transition-all group"
+            className="flex items-center gap-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md p-5 text-left transition-all group"
           >
             {org.avatar_url ? (
               <Image
@@ -132,7 +132,7 @@ function OrgSelector({ orgs, onSelect }: { orgs: Org[]; onSelect: (org: string) 
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">
+              <p className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
                 {org.login}
               </p>
               {org.description && (
@@ -242,7 +242,7 @@ function DashboardContent() {
   if (!org) {
     if (orgsLoading) {
       return (
-        <div className="flex flex-col h-full bg-slate-50">
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
           <Header title="Overview" org="" user={user} syncStatus={null} />
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
@@ -251,7 +251,7 @@ function DashboardContent() {
       );
     }
     return (
-      <div className="flex flex-col h-full bg-slate-50">
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
         <Header title="Overview" org="" user={user} syncStatus={null} />
         <div className="flex-1 p-6">
           {orgsLoaded && orgs.length === 0 && <GrantPermissionBanner onCheckAgain={refreshOrgs} />}
@@ -265,7 +265,7 @@ function DashboardContent() {
 
   // --- Org selected ---
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
       <Header
         title={`${org} — Overview`}
         org={org}
@@ -285,14 +285,14 @@ function DashboardContent() {
         )}
 
         {!loading && !error && (!overview || overview.total_prs === 0) && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-lg mx-auto mt-8">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-8 text-center max-w-lg mx-auto mt-8">
             <div className="flex justify-center mb-4">
               <div className="bg-indigo-50 rounded-2xl p-4 ring-1 ring-indigo-100">
                 <GitPullRequest className="h-8 w-8 text-indigo-600" />
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No data yet for {org}</h3>
-            <p className="text-slate-500 text-sm">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No data yet for {org}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               Click <strong className="text-slate-700">Sync Now</strong> in the header to fetch PR data from GitHub.
             </p>
           </div>
@@ -301,7 +301,7 @@ function DashboardContent() {
         {!loading && !error && overview && overview.total_prs > 0 && (
           <>
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Key Metrics</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Key Metrics</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard label="Total PRs" value={overview.total_prs.toLocaleString()} icon={GitPullRequest} color="indigo" />
                 <StatCard label="Merged PRs" value={overview.merged_prs.toLocaleString()} sub={`${overview.merge_rate}% merge rate`} icon={GitMerge} color="emerald" />
@@ -315,7 +315,7 @@ function DashboardContent() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Trends &amp; Performance</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Trends &amp; Performance</p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <PRTrendChart data={trends} />
                 <ReviewTimeChart data={devStats} />
@@ -323,7 +323,7 @@ function DashboardContent() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Contributors</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Contributors</p>
               <ContributorLeaderboard data={devStats} limit={10} />
             </div>
           </>

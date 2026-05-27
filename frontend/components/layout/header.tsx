@@ -69,9 +69,9 @@ export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderP
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+    <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0">
       <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h1>
         <SyncPill status={syncStatus?.status} />
       </div>
 
@@ -82,7 +82,7 @@ export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderP
             disabled={syncing || syncStatus?.status === "running" || syncStatus?.status === "pending"}
             title={syncing ? "Syncing…" : "Sync Now"}
             aria-label={syncing ? "Syncing…" : "Sync Now"}
-            className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors disabled:opacity-40"
+            className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors disabled:opacity-40"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           </button>
@@ -95,14 +95,14 @@ export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderP
                 alt={user.login}
                 width={32}
                 height={32}
-                className="rounded-full ring-2 ring-slate-100"
+                className="rounded-full ring-2 ring-slate-100 dark:ring-slate-700"
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
                 {user.login[0].toUpperCase()}
               </div>
             )}
-            <span className="text-sm font-medium text-slate-700">{user.name || user.login}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{user.name || user.login}</span>
           </div>
         )}
       </div>

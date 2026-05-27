@@ -27,13 +27,13 @@ interface StatCardProps {
 export function StatCard({ label, value, sub, icon: Icon, color = "indigo", className }: StatCardProps) {
   const colors = colorMap[color];
   return (
-    <div className={cn("bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-start gap-4", className)}>
+    <div className={cn("bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 flex items-start gap-4", className)}>
       <div className={cn("rounded-xl p-2.5 ring-1", colors.bg, colors.ring)}>
         <Icon className={cn("h-5 w-5", colors.text)} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 mt-1 leading-none">{value}</p>
+        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 leading-none">{value}</p>
         {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
       </div>
     </div>

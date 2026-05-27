@@ -7,7 +7,7 @@ import { Header } from "@/components/layout/header";
 import { getDigest, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatHours, getApiError } from "@/lib/utils";
-import { Download, FileText, Calendar, Users, GitMerge, Clock } from "lucide-react";
+import { Download, FileText, Calendar } from "lucide-react";
 import type { DigestData, SyncStatus, User } from "@/types";
 
 const PERIODS = [
@@ -26,9 +26,9 @@ function formatDate(iso: string) {
 
 function StatPill({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-slate-50 rounded-xl px-4 py-3 flex flex-col gap-0.5">
+    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 flex flex-col gap-0.5">
       <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{label}</span>
-      <span className="text-2xl font-bold text-slate-800">{value}</span>
+      <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{value}</span>
       {sub && <span className="text-xs text-slate-400">{sub}</span>}
     </div>
   );
@@ -36,7 +36,7 @@ function StatPill({ label, value, sub }: { label: string; value: string | number
 
 function DigestPreview({ digest, org }: { digest: DigestData; org: string }) {
   return (
-    <div id="digest-preview" className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div id="digest-preview" className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
       {/* Header */}
       <div className="bg-indigo-600 px-8 py-6">
         <div className="flex items-center gap-3 mb-1">
@@ -79,18 +79,18 @@ function DigestPreview({ digest, org }: { digest: DigestData; org: string }) {
             <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">Top Contributors</h3>
             <div className="space-y-2">
               {digest.top_contributors.map((c, i) => (
-                <div key={c.login} className="flex items-center gap-4 py-2.5 px-4 rounded-xl bg-slate-50">
+                <div key={c.login} className="flex items-center gap-4 py-2.5 px-4 rounded-xl bg-slate-50 dark:bg-slate-800">
                   <span className="text-sm font-bold text-slate-400 w-5 text-center">{i + 1}</span>
                   {c.avatar_url ? (
                     <Image src={c.avatar_url} alt={c.login} width={32} height={32} className="rounded-full" />
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center">
                       <span className="text-xs font-bold text-indigo-600">{c.login[0].toUpperCase()}</span>
                     </div>
                   )}
-                  <span className="flex-1 font-medium text-slate-800 text-sm">{c.login}</span>
-                  <div className="flex items-center gap-6 text-xs text-slate-500">
-                    <span><span className="font-semibold text-slate-700">{c.total_prs}</span> PRs</span>
+                  <span className="flex-1 font-medium text-slate-800 dark:text-slate-200 text-sm">{c.login}</span>
+                  <div className="flex items-center gap-6 text-xs text-slate-500 dark:text-slate-400">
+                    <span><span className="font-semibold text-slate-700 dark:text-slate-300">{c.total_prs}</span> PRs</span>
                     <span><span className="font-semibold text-indigo-600">{c.merged_prs}</span> merged</span>
                     <span><span className="font-semibold text-emerald-600">{c.reviews_given}</span> reviews</span>
                   </div>
@@ -106,18 +106,18 @@ function DigestPreview({ digest, org }: { digest: DigestData; org: string }) {
             <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">Top Repositories</h3>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100">
+                <tr className="border-b border-slate-100 dark:border-slate-800">
                   <th className="text-left pb-2 text-xs font-semibold text-slate-400">Repository</th>
                   <th className="text-right pb-2 text-xs font-semibold text-slate-400">Total PRs</th>
                   <th className="text-right pb-2 text-xs font-semibold text-slate-400">Merged</th>
                   <th className="text-right pb-2 text-xs font-semibold text-slate-400">Merge %</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {digest.top_repos.map((r) => (
                   <tr key={r.name}>
-                    <td className="py-2.5 font-medium text-slate-800">{r.name}</td>
-                    <td className="py-2.5 text-right text-slate-600">{r.total_prs}</td>
+                    <td className="py-2.5 font-medium text-slate-800 dark:text-slate-200">{r.name}</td>
+                    <td className="py-2.5 text-right text-slate-600 dark:text-slate-400">{r.total_prs}</td>
                     <td className="py-2.5 text-right text-indigo-600 font-medium">{r.merged_prs}</td>
                     <td className="py-2.5 text-right">
                       <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -222,7 +222,7 @@ function DigestContent() {
         }
       `}</style>
 
-      <div className="flex flex-col h-full bg-slate-50">
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
         <Header
           title="Digest"
           org={org}
@@ -232,7 +232,7 @@ function DigestContent() {
         />
         <div className="flex-1 p-6 overflow-auto space-y-6">
           {!org && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-slate-600 text-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 text-slate-600 dark:text-slate-300 text-sm">
               No organization selected. Go back to the overview and select one.
             </div>
           )}
@@ -242,14 +242,14 @@ function DigestContent() {
           )}
 
           {org && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-800 mb-1">Generate Digest</h3>
-                  <p className="text-sm text-slate-500">Select a time window to preview and download your team's activity report.</p>
+                  <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">Generate Digest</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Select a time window to preview and download your team's activity report.</p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex rounded-xl overflow-hidden border border-slate-200">
+                  <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
                     {PERIODS.map((p) => (
                       <button
                         key={p.value}
@@ -257,7 +257,7 @@ function DigestContent() {
                         className={`px-3 py-2 text-xs font-semibold transition-colors ${
                           period === p.value
                             ? "bg-indigo-600 text-white"
-                            : "text-slate-600 hover:bg-slate-50"
+                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                         }`}
                       >
                         {p.label}
@@ -268,7 +268,7 @@ function DigestContent() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={downloadCSV}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                       >
                         <Download className="h-4 w-4" />
                         CSV
@@ -302,7 +302,7 @@ function DigestContent() {
 
 export default function DigestPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-64 bg-slate-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-64 bg-slate-50 dark:bg-slate-950"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
       <DigestContent />
     </Suspense>
   );

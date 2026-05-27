@@ -29,9 +29,9 @@ export function ContributorLeaderboard({ data, limit = 10 }: ContributorLeaderbo
   const top = data.slice(0, limit);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-      <h3 className="font-semibold text-slate-800 mb-5">Contributor Leaderboard</h3>
-      <div className="divide-y divide-slate-100">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+      <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-5">Contributor Leaderboard</h3>
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
         {top.map((dev, idx) => {
           const rank = idx + 1;
           return (
@@ -54,14 +54,14 @@ export function ContributorLeaderboard({ data, limit = 10 }: ContributorLeaderbo
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-slate-800 truncate">{dev.login}</span>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{dev.login}</span>
                   <div className="flex items-center gap-3 ml-2 flex-shrink-0">
-                    <span className="text-sm font-bold text-slate-900">{dev.total_prs} PRs</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{dev.total_prs} PRs</span>
                     <span className="text-xs text-slate-400">{dev.reviews_given} reviews</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-indigo-500 rounded-full"
                       style={{ width: `${Math.min(dev.merge_rate, 100)}%` }}

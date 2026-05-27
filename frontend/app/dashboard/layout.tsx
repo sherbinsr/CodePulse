@@ -72,7 +72,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
       </div>
     );
@@ -81,7 +81,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const hasOrg = orgs.length > 0 && !!org;
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar org={org} hasOrg={hasOrg} orgs={orgs} onOrgChange={handleOrgChange} onRefreshOrgs={handleRefreshOrgs} />
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1">{children}</main>

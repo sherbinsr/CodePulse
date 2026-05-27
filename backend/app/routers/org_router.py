@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.database import AsyncSessionLocal, get_db
 from app.models.user import User
@@ -15,8 +19,10 @@ router = APIRouter(prefix="/orgs", tags=["Organizations"])
 @router.get("", response_model=list[OrgOut])
 async def list_orgs(current_user: User = Depends(get_current_user)):
     """List GitHub organizations the authenticated user belongs to."""
+    logger.info("Listing orgs for user: %s", current_user.login)
     gh = GitHubService(current_user.github_token)
     orgs = await gh.get_user_orgs()
+    logger.debug("Found %d orgs for user: %s", len(orgs), current_user.login)
     return [OrgOut(login=o["login"], avatar_url=o.get("avatar_url"), description=o.get("description")) for o in orgs]
 
 
@@ -49,9 +55,11 @@ async def trigger_sync(
 
     running = await sync_repo.get_running(org)
     if running:
+        logger.info("Sync already running for org: %s (job_id=%d)", org, running.id)
         return SyncTriggerResponse(job_id=running.id, status=running.status, message="Sync already in progress")
 
     job = await sync_repo.create(org=org, triggered_by=current_user.login)
+    logger.info("Sync job %d created for org: %s by user: %s", job.id, org, current_user.login)
 
     async def _run(job_id: int, org_: str, token: str):
         async with AsyncSessionLocal() as bg_db:
@@ -70,7 +78,9 @@ async def sync_status(
     """Get the latest sync job status for an organization."""
     job = await SyncRepository(db).get_latest(org)
     if not job:
+        logger.debug("No sync job found for org: %s", org)
         return SyncStatusOut(status="never_synced")
+    logger.debug("Sync status for org %s: %s (job_id=%d)", org, job.status, job.id)
     return SyncStatusOut(
         status=job.status,
         job_id=job.id,

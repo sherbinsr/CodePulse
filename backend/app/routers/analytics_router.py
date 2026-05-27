@@ -1,7 +1,10 @@
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models.user import User
@@ -31,6 +34,7 @@ async def org_overview(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("GET overview for org=%s user=%s", org, current_user.login)
     return await AnalyticsService(db).get_overview(org)
 
 
@@ -40,6 +44,7 @@ async def developer_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("GET developer stats for org=%s user=%s", org, current_user.login)
     return await AnalyticsService(db).get_developer_stats(org)
 
 
@@ -49,6 +54,7 @@ async def repo_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("GET repo stats for org=%s user=%s", org, current_user.login)
     return await AnalyticsService(db).get_repo_stats(org)
 
 
@@ -59,6 +65,7 @@ async def monthly_trends(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("GET monthly trends for org=%s months=%d user=%s", org, months, current_user.login)
     return await AnalyticsService(db).get_monthly_trends(org, months)
 
 
@@ -137,4 +144,5 @@ async def pr_list(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("GET PR list for org=%s user=%s", org, current_user.login)
     return await AnalyticsService(db).get_pr_list(org, repo, author, state, limit, offset)

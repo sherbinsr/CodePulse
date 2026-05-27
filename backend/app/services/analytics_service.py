@@ -1,6 +1,9 @@
+import logging
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.pr_repository import PRRepository
@@ -28,22 +31,29 @@ class AnalyticsService:
         self.pr_repo = PRRepository(db)
 
     async def get_overview(self, org: str) -> OrgOverviewOut:
+        logger.debug("Fetching org overview for: %s", org)
         data = await self.analytics_repo.get_org_overview(org)
         return OrgOverviewOut(**data)
 
     async def get_developer_stats(self, org: str) -> list:
+        logger.debug("Fetching developer stats for: %s", org)
         rows = await self.analytics_repo.get_developer_stats(org)
+        logger.info("Developer stats: %d developers found for org: %s", len(rows), org)
         return [DeveloperStatOut(**r) for r in rows]
 
     async def get_repo_stats(self, org: str) -> list:
+        logger.debug("Fetching repo stats for: %s", org)
         rows = await self.analytics_repo.get_repo_stats(org)
+        logger.info("Repo stats: %d repos found for org: %s", len(rows), org)
         return [RepoStatOut(**r) for r in rows]
 
     async def get_monthly_trends(self, org: str, months: int = 6) -> list:
+        logger.debug("Fetching monthly trends for org: %s, months: %d", org, months)
         rows = await self.analytics_repo.get_monthly_trends(org, months)
         return [MonthlyTrendOut(**r) for r in rows]
 
     async def get_digest(self, org: str, period: str) -> DigestOut:
+        logger.debug("Fetching digest for org: %s, period: %s", org, period)
         from datetime import datetime, timedelta
         period_map = {
             "1w": (7,   "Last 1 Week"),
@@ -105,7 +115,12 @@ class AnalyticsService:
         limit: int,
         offset: int,
     ) -> PRListResponse:
+        logger.debug(
+            "Fetching PR list for org=%s repo=%s author=%s state=%s limit=%d offset=%d",
+            org, repo, author, state, limit, offset,
+        )
         prs, total = await self.pr_repo.list_prs(org, repo, author, state, limit, offset)
+        logger.info("PR list: %d/%d PRs returned for org: %s", len(prs), total, org)
         return PRListResponse(
             data=[
                 PullRequestOut(
