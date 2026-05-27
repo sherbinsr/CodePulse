@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   GitPullRequest, Users, GitBranch, Star, Home, LogOut, ChevronsUpDown, RefreshCw,
+  FileText, Zap, GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -10,13 +11,24 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Org } from "@/types";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
-const navItems = [
-  { href: "/dashboard",              icon: Home,           label: "Overview",     requiresOrg: false },
-  { href: "/dashboard/repositories", icon: GitBranch,      label: "Repositories", requiresOrg: true },
-  { href: "/dashboard/developers",   icon: Users,          label: "Developers",   requiresOrg: true },
-  { href: "/dashboard/reviews",      icon: Star,           label: "Reviews",      requiresOrg: true },
-  { href: "/dashboard/pr-insights",  icon: GitPullRequest, label: "PR Insights",  requiresOrg: true },
+interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  requiresOrg: boolean;
+}
+
+const navItems: NavItem[] = [
+  { href: "/dashboard",               icon: Home,           label: "Overview",       requiresOrg: false },
+  { href: "/dashboard/repositories",  icon: GitBranch,      label: "Repositories",   requiresOrg: true },
+  { href: "/dashboard/developers",    icon: Users,          label: "Developers",     requiresOrg: true },
+  { href: "/dashboard/reviews",       icon: Star,           label: "Reviews",        requiresOrg: true },
+  { href: "/dashboard/pr-insights",   icon: GitPullRequest, label: "PR Insights",    requiresOrg: true },
+  { href: "/dashboard/ci-insights",   icon: Zap,            label: "CI Insights",    requiresOrg: true },
+  { href: "/dashboard/commit-activity", icon: GitCommit,    label: "Commit Activity",requiresOrg: true },
+  { href: "/dashboard/digest",        icon: FileText,       label: "Digest",         requiresOrg: true },
 ];
 
 interface SidebarProps {
@@ -125,8 +137,9 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
           })}
         </nav>
 
-        {/* Sign out */}
-        <div className="px-3 py-3 border-t border-slate-800 sticky bottom-0 bg-slate-900 shrink-0">
+        {/* Sign out + Theme toggle */}
+        <div className="px-3 py-3 border-t border-slate-800 sticky bottom-0 bg-slate-900 shrink-0 space-y-0.5">
+          <ThemeToggle />
           <button
             onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,15 +12,11 @@ class RepoRepository:
         self.db = db
 
     async def get_by_full_name(self, full_name: str) -> Optional[Repository]:
-        result = await self.db.execute(
-            select(Repository).where(Repository.full_name == full_name)
-        )
+        result = await self.db.execute(select(Repository).where(Repository.full_name == full_name))
         return result.scalar_one_or_none()
 
     async def list_by_org(self, org: str) -> list:
-        result = await self.db.execute(
-            select(Repository).where(Repository.owner == org)
-        )
+        result = await self.db.execute(select(Repository).where(Repository.owner == org))
         return list(result.scalars().all())
 
     async def upsert(self, full_name: str, **kwargs) -> Repository:

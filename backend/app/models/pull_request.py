@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, DateTime, Integer, BigInteger, Text, ForeignKey, Float
+
+from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
 
 
@@ -34,7 +36,9 @@ class PRReview(Base):
     __tablename__ = "pr_reviews"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    pr_id: Mapped[int] = mapped_column(Integer, ForeignKey("pull_requests.id", ondelete="CASCADE"), index=True, nullable=False)
+    pr_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pull_requests.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     repo_full_name: Mapped[str] = mapped_column(String(512), index=True, nullable=False)
     org: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     pr_number: Mapped[int] = mapped_column(Integer, nullable=False)

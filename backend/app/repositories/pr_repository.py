@@ -1,8 +1,9 @@
-from typing import Optional, Tuple, List
-from sqlalchemy import select, delete
+from typing import Optional
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.pull_request import PullRequest, PRReview
+from app.models.pull_request import PRReview, PullRequest
 
 
 class PRRepository:
@@ -10,9 +11,7 @@ class PRRepository:
         self.db = db
 
     async def delete_by_repo(self, repo_full_name: str) -> None:
-        await self.db.execute(
-            delete(PRReview).where(PRReview.repo_full_name == repo_full_name)
-        )
+        await self.db.execute(delete(PRReview).where(PRReview.repo_full_name == repo_full_name))
         await self.db.execute(
             delete(PullRequest).where(PullRequest.repo_full_name == repo_full_name)
         )
@@ -36,9 +35,7 @@ class PRRepository:
         state: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> Tuple[List[PullRequest], int]:
-        from sqlalchemy import func
-
+    ) -> tuple[list[PullRequest], int]:
         base = select(PullRequest).where(PullRequest.org == org)
         count_base = select(func.count(PullRequest.id)).where(PullRequest.org == org)
 

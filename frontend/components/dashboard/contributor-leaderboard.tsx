@@ -8,44 +8,73 @@ interface ContributorLeaderboardProps {
   limit?: number;
 }
 
+const rankStyles: Record<number, { bg: string; text: string; label: string }> = {
+  1: { bg: "bg-amber-100",   text: "text-amber-700",   label: "1" },
+  2: { bg: "bg-slate-200",   text: "text-slate-600",   label: "2" },
+  3: { bg: "bg-orange-100",  text: "text-orange-700",  label: "3" },
+};
+
+function RankBadge({ rank }: { rank: number }) {
+  const style = rankStyles[rank] ?? { bg: "bg-slate-100", text: "text-slate-500", label: String(rank) };
+  return (
+    <span
+      className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${style.bg} ${style.text}`}
+    >
+      {style.label}
+    </span>
+  );
+}
+
 export function ContributorLeaderboard({ data, limit = 10 }: ContributorLeaderboardProps) {
   const top = data.slice(0, limit);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <h3 className="font-semibold text-slate-800 mb-4">Contributor Leaderboard</h3>
-      <div className="space-y-3">
-        {top.map((dev, idx) => (
-          <div key={dev.login} className="flex items-center gap-3">
-            <span className="text-slate-400 text-xs font-mono w-5 text-right">{idx + 1}</span>
-            {dev.avatar_url ? (
-              <Image src={dev.avatar_url} alt={dev.login} width={28} height={28} className="rounded-full" />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
-                {dev.login[0].toUpperCase()}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-800 truncate">{dev.login}</span>
-                <span className="text-sm font-bold text-slate-900 ml-2">{dev.total_prs} PRs</span>
-              </div>
-              <div className="flex items-center gap-3 mt-0.5">
-                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-indigo-500 rounded-full"
-                    style={{ width: `${dev.merge_rate}%` }}
-                  />
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+      <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-5">Contributor Leaderboard</h3>
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        {top.map((dev, idx) => {
+          const rank = idx + 1;
+          return (
+            <div key={dev.login} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+              <RankBadge rank={rank} />
+
+              {dev.avatar_url ? (
+                <Image
+                  src={dev.avatar_url}
+                  alt={dev.login}
+                  width={32}
+                  height={32}
+                  className="rounded-full flex-shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
+                  {dev.login[0].toUpperCase()}
                 </div>
-                <span className="text-xs text-slate-400 whitespace-nowrap">{dev.merge_rate}% merged</span>
+              )}
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{dev.login}</span>
+                  <div className="flex items-center gap-3 ml-2 flex-shrink-0">
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{dev.total_prs} PRs</span>
+                    <span className="text-xs text-slate-400">{dev.reviews_given} reviews</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full"
+                      style={{ width: `${Math.min(dev.merge_rate, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-slate-400 whitespace-nowrap w-20 text-right">
+                    {dev.merge_rate}% merged
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="text-right text-xs text-slate-400 w-14">
-              <div>{dev.reviews_given} reviews</div>
-              <div>{formatHours(dev.avg_merge_hours)}</div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
