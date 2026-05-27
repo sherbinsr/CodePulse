@@ -53,3 +53,35 @@ class ReviewNetworkOut(BaseModel):
     pr_author: str
     reviewer: str
     review_count: int
+
+
+class DigestContributorOut(BaseModel):
+    login: str
+    avatar_url: Optional[str]
+    total_prs: int
+    merged_prs: int
+    reviews_given: int
+
+
+class DigestRepoOut(BaseModel):
+    name: str
+    total_prs: int
+    merged_prs: int
+    merge_rate: float
+
+
+class DigestOut(BaseModel):
+    org: str
+    period_label: str
+    since: str
+    until: str
+    total_prs: int
+    merged_prs: int
+    open_prs: int
+    merge_rate: float
+    avg_merge_hours: Optional[float]
+    avg_review_hours: Optional[float]
+    unique_contributors: int
+    total_reviews: int
+    top_contributors: list[DigestContributorOut]
+    top_repos: list[DigestRepoOut]

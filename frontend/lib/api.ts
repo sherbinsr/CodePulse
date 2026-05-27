@@ -1,7 +1,7 @@
 import axios from "axios";
 import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
-  ReviewNetwork, PullRequest, Org, SyncStatus, User,
+  ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
 } from "@/types";
 
 const api = axios.create({
@@ -72,6 +72,11 @@ export const getPRList = async (
   params?: { repo?: string; author?: string; state?: string; limit?: number; offset?: number }
 ): Promise<{ data: PullRequest[]; total: number }> => {
   const { data } = await api.get(`/api/analytics/${org}/prs`, { params });
+  return data;
+};
+
+export const getDigest = async (org: string, period: string): Promise<DigestData> => {
+  const { data } = await api.get(`/api/analytics/${org}/digest?period=${period}`);
   return data;
 };
 

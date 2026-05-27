@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,7 +7,7 @@ from app.routers.deps import get_current_user
 from app.services.analytics_service import AnalyticsService
 from app.schemas.analytics import (
     OrgOverviewOut, DeveloperStatOut, RepoStatOut,
-    MonthlyTrendOut, ReviewNetworkOut,
+    MonthlyTrendOut, ReviewNetworkOut, DigestOut,
 )
 from app.schemas.pull_request import PRListResponse
 from app.models.user import User
@@ -24,7 +24,7 @@ async def org_overview(
     return await AnalyticsService(db).get_overview(org)
 
 
-@router.get("/{org}/developers", response_model=List[DeveloperStatOut])
+@router.get("/{org}/developers", response_model=list[DeveloperStatOut])
 async def developer_stats(
     org: str,
     current_user: User = Depends(get_current_user),
@@ -33,7 +33,7 @@ async def developer_stats(
     return await AnalyticsService(db).get_developer_stats(org)
 
 
-@router.get("/{org}/repositories", response_model=List[RepoStatOut])
+@router.get("/{org}/repositories", response_model=list[RepoStatOut])
 async def repo_stats(
     org: str,
     current_user: User = Depends(get_current_user),
@@ -42,7 +42,7 @@ async def repo_stats(
     return await AnalyticsService(db).get_repo_stats(org)
 
 
-@router.get("/{org}/trends", response_model=List[MonthlyTrendOut])
+@router.get("/{org}/trends", response_model=list[MonthlyTrendOut])
 async def monthly_trends(
     org: str,
     months: int = Query(6, ge=1, le=24),
@@ -52,13 +52,23 @@ async def monthly_trends(
     return await AnalyticsService(db).get_monthly_trends(org, months)
 
 
-@router.get("/{org}/review-network", response_model=List[ReviewNetworkOut])
+@router.get("/{org}/review-network", response_model=list[ReviewNetworkOut])
 async def review_network(
     org: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     return await AnalyticsService(db).get_review_network(org)
+
+
+@router.get("/{org}/digest", response_model=DigestOut)
+async def org_digest(
+    org: str,
+    period: str = Query("1w", pattern="^(1w|2w|3w|1m|2m|3m|6m)$"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AnalyticsService(db).get_digest(org, period)
 
 
 @router.get("/{org}/prs", response_model=PRListResponse)

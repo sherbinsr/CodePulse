@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -23,7 +23,7 @@ class PullRequestOut(BaseModel):
 
 
 class PRListResponse(BaseModel):
-    data: List[PullRequestOut]
+    data: list[PullRequestOut]
     total: int
     limit: int
     offset: int

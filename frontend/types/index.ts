@@ -83,6 +83,38 @@ export interface PullRequest {
   closed_at: string | null;
 }
 
+export interface DigestContributor {
+  login: string;
+  avatar_url: string | null;
+  total_prs: number;
+  merged_prs: number;
+  reviews_given: number;
+}
+
+export interface DigestRepo {
+  name: string;
+  total_prs: number;
+  merged_prs: number;
+  merge_rate: number;
+}
+
+export interface DigestData {
+  org: string;
+  period_label: string;
+  since: string;
+  until: string;
+  total_prs: number;
+  merged_prs: number;
+  open_prs: number;
+  merge_rate: number;
+  avg_merge_hours: number | null;
+  avg_review_hours: number | null;
+  unique_contributors: number;
+  total_reviews: number;
+  top_contributors: DigestContributor[];
+  top_repos: DigestRepo[];
+}
+
 export interface SyncStatus {
   status: "never_synced" | "pending" | "running" | "done" | "failed";
   job_id?: number;

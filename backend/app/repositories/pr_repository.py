@@ -1,5 +1,5 @@
-from typing import Optional, Tuple, List
-from sqlalchemy import select, delete
+from typing import Optional
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.pull_request import PullRequest, PRReview
@@ -36,9 +36,7 @@ class PRRepository:
         state: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> Tuple[List[PullRequest], int]:
-        from sqlalchemy import func
-
+    ) -> tuple[list[PullRequest], int]:
         base = select(PullRequest).where(PullRequest.org == org)
         count_base = select(func.count(PullRequest.id)).where(PullRequest.org == org)
 

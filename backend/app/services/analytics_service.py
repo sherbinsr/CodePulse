@@ -5,7 +5,8 @@ from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.pr_repository import PRRepository
 from app.schemas.analytics import (
     OrgOverviewOut, DeveloperStatOut, RepoStatOut,
-    MonthlyTrendOut, ReviewNetworkOut,
+    MonthlyTrendOut, ReviewNetworkOut, DigestOut,
+    DigestContributorOut, DigestRepoOut,
 )
 from app.schemas.pull_request import PullRequestOut, PRListResponse
 
@@ -30,6 +31,30 @@ class AnalyticsService:
     async def get_monthly_trends(self, org: str, months: int = 6) -> list:
         rows = await self.analytics_repo.get_monthly_trends(org, months)
         return [MonthlyTrendOut(**r) for r in rows]
+
+    async def get_digest(self, org: str, period: str) -> DigestOut:
+        from datetime import datetime, timedelta
+        period_map = {
+            "1w": (7,   "Last 1 Week"),
+            "2w": (14,  "Last 2 Weeks"),
+            "3w": (21,  "Last 3 Weeks"),
+            "1m": (30,  "Last 1 Month"),
+            "2m": (60,  "Last 2 Months"),
+            "3m": (90,  "Last 3 Months"),
+            "6m": (180, "Last 6 Months"),
+        }
+        days, label = period_map.get(period, (30, "Last 1 Month"))
+        since = datetime.utcnow() - timedelta(days=days)
+        data = await self.analytics_repo.get_digest(org, since)
+        top_contributors = [DigestContributorOut(**c) for c in data.pop("top_contributors")]
+        top_repos = [DigestRepoOut(**r) for r in data.pop("top_repos")]
+        return DigestOut(
+            org=org,
+            period_label=label,
+            top_contributors=top_contributors,
+            top_repos=top_repos,
+            **data,
+        )
 
     async def get_review_network(self, org: str) -> list:
         rows = await self.analytics_repo.get_review_network(org)

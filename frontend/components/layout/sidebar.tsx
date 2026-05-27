@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  GitPullRequest, Users, GitBranch, Star, Home, LogOut, ChevronsUpDown, RefreshCw,
+  GitPullRequest, Users, GitBranch, Star, Home, LogOut, ChevronsUpDown, RefreshCw, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -17,6 +17,7 @@ const navItems = [
   { href: "/dashboard/developers",   icon: Users,          label: "Developers",   requiresOrg: true },
   { href: "/dashboard/reviews",      icon: Star,           label: "Reviews",      requiresOrg: true },
   { href: "/dashboard/pr-insights",  icon: GitPullRequest, label: "PR Insights",  requiresOrg: true },
+  { href: "/dashboard/digest",       icon: FileText,       label: "Digest",       requiresOrg: true },
 ];
 
 interface SidebarProps {
