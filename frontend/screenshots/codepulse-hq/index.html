@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0f0f1a; }
+
+      .screen-clip {
+        position: absolute;
+        top: 0; left: 0;
+        width: 1920px; height: 1080px;
+      }
+      .screen-clip img {
+        width: 1920px;
+        height: 1080px;
+        object-fit: cover;
+        object-position: top center;
+        display: block;
+      }
+
+      .subtitle {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        background: rgba(0, 0, 0, 0.78);
+        color: #fff;
+        font-family: sans-serif;
+        font-size: 22px;
+        font-weight: 500;
+        padding: 16px 40px;
+        text-align: center;
+        letter-spacing: 0.3px;
+      }
+
+      .title-card {
+        position: absolute;
+        top: 0; left: 0;
+        width: 1920px; height: 1080px;
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+      }
+      .title-logo {
+        font-size: 84px;
+        font-weight: 800;
+        color: #fff;
+        font-family: sans-serif;
+        letter-spacing: -3px;
+      }
+      .title-logo span { color: #818cf8; }
+      .title-tagline {
+        font-size: 30px;
+        color: #c7d2fe;
+        font-family: sans-serif;
+        font-weight: 400;
+        letter-spacing: 0.2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="100"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Intro title card: 0–4s -->
+      <div id="title-card" class="clip title-card" data-start="0" data-duration="4" data-track-index="1">
+        <div class="title-logo">Code<span>Pulse</span></div>
+        <div class="title-tagline">GitHub PR Analytics · Team Velocity · Code Health</div>
+      </div>
+
+      <!-- 01 Login: 4–10s -->
+      <div id="screen-01" class="clip screen-clip" data-start="4" data-duration="6" data-track-index="1">
+        <img src="assets/frames/01-landing.png" />
+        <div class="subtitle">Step 1 – Sign in with GitHub OAuth</div>
+      </div>
+
+      <!-- 02 Overview: 10–19s -->
+      <div id="screen-02" class="clip screen-clip" data-start="10" data-duration="9" data-track-index="1">
+        <img src="assets/frames/02-overview.png" />
+        <div class="subtitle">Step 2 – Dashboard overview: team metrics at a glance</div>
+      </div>
+
+      <!-- 03 Repositories: 19–25s -->
+      <div id="screen-03" class="clip screen-clip" data-start="19" data-duration="6" data-track-index="1">
+        <img src="assets/frames/03-repositories.png" />
+        <div class="subtitle">Step 3 – Repositories: PR velocity and review turnaround</div>
+      </div>
+
+      <!-- 04 Repositories table: 25–31s -->
+      <div id="screen-04" class="clip screen-clip" data-start="25" data-duration="6" data-track-index="1">
+        <img src="assets/frames/04-repositories-tbl.png" />
+        <div class="subtitle">Step 3 – Sortable repository table with per-repo insights</div>
+      </div>
+
+      <!-- 05 Developers: 31–39s -->
+      <div id="screen-05" class="clip screen-clip" data-start="31" data-duration="8" data-track-index="1">
+        <img src="assets/frames/05-developers.png" />
+        <div class="subtitle">Step 4 – Developer profiles: contributions, reviews, and impact</div>
+      </div>
+
+      <!-- 06 Reviews: 39–45s -->
+      <div id="screen-06" class="clip screen-clip" data-start="39" data-duration="6" data-track-index="1">
+        <img src="assets/frames/06-reviews.png" />
+        <div class="subtitle">Step 5 – Code reviews: participation rate and merge time</div>
+      </div>
+
+      <!-- 07 Reviews heatmap: 45–51s -->
+      <div id="screen-07" class="clip screen-clip" data-start="45" data-duration="6" data-track-index="1">
+        <img src="assets/frames/07-reviews-heatmap.png" />
+        <div class="subtitle">Step 5 – Review activity heatmap: when does your team review?</div>
+      </div>
+
+      <!-- 08 PR Insights: 51–58s -->
+      <div id="screen-08" class="clip screen-clip" data-start="51" data-duration="7" data-track-index="1">
+        <img src="assets/frames/08-pr-insights.png" />
+        <div class="subtitle">Step 6 – PR insights: filter by repo, author, and date range</div>
+      </div>
+
+      <!-- 09 CI Insights: 58–64s -->
+      <div id="screen-09" class="clip screen-clip" data-start="58" data-duration="6" data-track-index="1">
+        <img src="assets/frames/09-ci-insights.png" />
+        <div class="subtitle">Step 7 – CI insights: build duration and flaky test detection</div>
+      </div>
+
+      <!-- 10 CI Trends: 64–70s -->
+      <div id="screen-10" class="clip screen-clip" data-start="64" data-duration="6" data-track-index="1">
+        <img src="assets/frames/10-ci-trends.png" />
+        <div class="subtitle">Step 7 – CI trend charts: success rate and build health over time</div>
+      </div>
+
+      <!-- 11 Commit Activity: 70–76s -->
+      <div id="screen-11" class="clip screen-clip" data-start="70" data-duration="6" data-track-index="1">
+        <img src="assets/frames/11-commit-activity.png" />
+        <div class="subtitle">Step 8 – Commit activity: churn ratio and code velocity</div>
+      </div>
+
+      <!-- 12 Commit Burnout: 76–82s -->
+      <div id="screen-12" class="clip screen-clip" data-start="76" data-duration="6" data-track-index="1">
+        <img src="assets/frames/12-commit-burnout.png" />
+        <div class="subtitle">Step 8 – Burnout signals: after-hours and weekend commit patterns</div>
+      </div>
+
+      <!-- 13 Digest: 82–88s -->
+      <div id="screen-13" class="clip screen-clip" data-start="82" data-duration="6" data-track-index="1">
+        <img src="assets/frames/13-digest.png" />
+        <div class="subtitle">Step 9 – Weekly digest: AI-generated team summary</div>
+      </div>
+
+      <!-- 14 Digest Preview: 88–93s -->
+      <div id="screen-14" class="clip screen-clip" data-start="88" data-duration="5" data-track-index="1">
+        <img src="assets/frames/14-digest-preview.png" />
+        <div class="subtitle">Step 9 – Preview and share your weekly team digest</div>
+      </div>
+
+      <!-- 15 Dark mode: 93–100s -->
+      <div id="screen-15" class="clip screen-clip" data-start="93" data-duration="7" data-track-index="1">
+        <img src="assets/frames/15-dark-mode.png" />
+        <div class="subtitle">Step 10 – Dark mode: switch themes with one click</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Title card: animate in logo and tagline, fade out before first screen
+      tl.from("#title-card .title-logo", { opacity: 0, y: -40, duration: 1, ease: "power2.out" }, 0);
+      tl.from("#title-card .title-tagline", { opacity: 0, y: 24, duration: 1, ease: "power2.out" }, 0.5);
+      tl.to("#title-card", { opacity: 0, duration: 0.6, ease: "power1.in" }, 3.4);
+      tl.set("#title-card", { opacity: 0 }, 4.0);
+
+      // Each screen fades in from black
+      const screens = [
+        { id: "screen-01", start: 4 },
+        { id: "screen-02", start: 10 },
+        { id: "screen-03", start: 19 },
+        { id: "screen-04", start: 25 },
+        { id: "screen-05", start: 31 },
+        { id: "screen-06", start: 39 },
+        { id: "screen-07", start: 45 },
+        { id: "screen-08", start: 51 },
+        { id: "screen-09", start: 58 },
+        { id: "screen-10", start: 64 },
+        { id: "screen-11", start: 70 },
+        { id: "screen-12", start: 76 },
+        { id: "screen-13", start: 82 },
+        { id: "screen-14", start: 88 },
+        { id: "screen-15", start: 93 },
+      ];
+
+      screens.forEach(({ id, start }) => {
+        tl.from(`#${id}`, { opacity: 0, duration: 0.7, ease: "power1.out" }, start);
+      });
+
+      // Fade out last screen into black
+      tl.to("#screen-15", { opacity: 0, duration: 1, ease: "power1.in" }, 99);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
