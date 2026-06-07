@@ -10,8 +10,13 @@ class CommitRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def delete_by_repo(self, repo_full_name: str) -> None:
-        await self.db.execute(delete(Commit).where(Commit.repo_full_name == repo_full_name))
+    async def delete_by_repo(self, repo_full_name: str, provider: str = "github") -> None:
+        await self.db.execute(
+            delete(Commit).where(
+                Commit.repo_full_name == repo_full_name,
+                Commit.provider == provider,
+            )
+        )
 
     async def bulk_insert(self, commits: list[dict]) -> None:
         if commits:

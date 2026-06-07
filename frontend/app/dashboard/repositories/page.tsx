@@ -52,6 +52,7 @@ function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
 function RepositoriesContent() {
   const params = useSearchParams();
   const org = params.get("org") ?? "";
+  const provider = (params.get("provider") ?? "github") as "github" | "gitlab";
   const [repos, setRepos] = useState<RepoStat[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -66,7 +67,7 @@ function RepositoriesContent() {
     setLoading(true);
     setError(null);
     try {
-      const [data, sync] = await Promise.all([getRepoStats(org), getSyncStatus(org)]);
+      const [data, sync] = await Promise.all([getRepoStats(org), getSyncStatus(org, provider)]);
       if (req !== reqRef.current) return;
       setRepos(data);
       setSyncStatus(sync);
@@ -92,6 +93,7 @@ function RepositoriesContent() {
       <Header
         title="Repository Analytics"
         org={org}
+        provider={provider}
         user={user}
         syncStatus={syncStatus}
         onSyncComplete={load}

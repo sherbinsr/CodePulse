@@ -12,6 +12,7 @@ class SyncJob(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     org: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    provider: Mapped[str] = mapped_column(String(20), default="github", nullable=False, index=True)
     triggered_by: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
     repos_synced: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

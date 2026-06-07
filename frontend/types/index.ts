@@ -9,6 +9,7 @@ export interface Org {
   login: string;
   avatar_url: string | null;
   description: string | null;
+  provider: "github" | "gitlab";
 }
 
 export interface OrgOverview {

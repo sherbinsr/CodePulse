@@ -21,6 +21,11 @@ export const githubCallback = async (code: string): Promise<{ access_token: stri
   return data;
 };
 
+export const gitlabCallback = async (code: string): Promise<{ access_token: string; user: User }> => {
+  const { data } = await api.post("/api/auth/gitlab/callback", { code });
+  return data;
+};
+
 export const getMe = async (token: string): Promise<User> => {
   const { data } = await api.get(`/api/auth/me?token=${token}`);
   return data;
@@ -32,13 +37,19 @@ export const listOrgs = async (): Promise<Org[]> => {
   return data;
 };
 
-export const triggerSync = async (org: string): Promise<{ job_id: number; status: string; message: string }> => {
-  const { data } = await api.post(`/api/orgs/${org}/sync`);
+export const triggerSync = async (
+  org: string,
+  provider: "github" | "gitlab" = "github"
+): Promise<{ job_id: number; status: string; message: string }> => {
+  const { data } = await api.post(`/api/orgs/${org}/sync?provider=${provider}`);
   return data;
 };
 
-export const getSyncStatus = async (org: string): Promise<SyncStatus> => {
-  const { data } = await api.get(`/api/orgs/${org}/sync/status`);
+export const getSyncStatus = async (
+  org: string,
+  provider: "github" | "gitlab" = "github"
+): Promise<SyncStatus> => {
+  const { data } = await api.get(`/api/orgs/${org}/sync/status?provider=${provider}`);
   return data;
 };
 

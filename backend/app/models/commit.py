@@ -11,7 +11,8 @@ class Commit(Base):
     __tablename__ = "commits"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    sha: Mapped[str] = mapped_column(String(40), nullable=False)
+    sha: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(20), default="github", nullable=False, index=True)
     repo_full_name: Mapped[str] = mapped_column(String(512), index=True, nullable=False)
     org: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     author_login: Mapped[Optional[str]] = mapped_column(String(255), index=True)

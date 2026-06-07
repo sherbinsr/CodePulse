@@ -8,6 +8,7 @@ class OrgOut(BaseModel):
     login: str
     avatar_url: Optional[str]
     description: Optional[str]
+    provider: str = "github"
 
 
 class SyncTriggerResponse(BaseModel):

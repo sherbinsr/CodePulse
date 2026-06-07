@@ -13,6 +13,7 @@ const PAGE_SIZE = 50;
 function PRInsightsContent() {
   const params = useSearchParams();
   const org = params.get("org") ?? "";
+  const provider = (params.get("provider") ?? "github") as "github" | "gitlab";
   const [prs, setPrs] = useState<PullRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -39,7 +40,7 @@ function PRInsightsContent() {
           offset: page * PAGE_SIZE,
         }),
         getRepoStats(org),
-        getSyncStatus(org),
+        getSyncStatus(org, provider),
       ]);
       if (req !== reqRef.current) return;
       setPrs(data);
@@ -61,7 +62,7 @@ function PRInsightsContent() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
-      <Header title="PR Insights" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
+      <Header title="PR Insights" org={org} provider={provider} user={user} syncStatus={syncStatus} onSyncComplete={load} />
       <div className="flex-1 p-6 overflow-auto space-y-4">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>

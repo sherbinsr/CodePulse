@@ -11,23 +11,30 @@ class SyncRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_latest(self, org: str) -> Optional[SyncJob]:
-        result = await self.db.execute(
-            select(SyncJob).where(SyncJob.org == org).order_by(SyncJob.started_at.desc()).limit(1)
-        )
-        return result.scalar_one_or_none()
-
-    async def get_running(self, org: str) -> Optional[SyncJob]:
+    async def get_latest(self, org: str, provider: str = "github") -> Optional[SyncJob]:
         result = await self.db.execute(
             select(SyncJob)
-            .where(SyncJob.org == org, SyncJob.status.in_(["pending", "running"]))
+            .where(SyncJob.org == org, SyncJob.provider == provider)
             .order_by(SyncJob.started_at.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()
 
-    async def create(self, org: str, triggered_by: str) -> SyncJob:
-        job = SyncJob(org=org, triggered_by=triggered_by, status="pending")
+    async def get_running(self, org: str, provider: str = "github") -> Optional[SyncJob]:
+        result = await self.db.execute(
+            select(SyncJob)
+            .where(
+                SyncJob.org == org,
+                SyncJob.provider == provider,
+                SyncJob.status.in_(["pending", "running"]),
+            )
+            .order_by(SyncJob.started_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def create(self, org: str, triggered_by: str, provider: str = "github") -> SyncJob:
+        job = SyncJob(org=org, provider=provider, triggered_by=triggered_by, status="pending")
         self.db.add(job)
         await self.db.commit()
         await self.db.refresh(job)

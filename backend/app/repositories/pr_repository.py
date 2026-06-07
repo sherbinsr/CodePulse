@@ -10,10 +10,17 @@ class PRRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def delete_by_repo(self, repo_full_name: str) -> None:
-        await self.db.execute(delete(PRReview).where(PRReview.repo_full_name == repo_full_name))
+    async def delete_by_repo(self, repo_full_name: str, provider: str = "github") -> None:
         await self.db.execute(
-            delete(PullRequest).where(PullRequest.repo_full_name == repo_full_name)
+            delete(PRReview).where(
+                PRReview.repo_full_name == repo_full_name,
+            )
+        )
+        await self.db.execute(
+            delete(PullRequest).where(
+                PullRequest.repo_full_name == repo_full_name,
+                PullRequest.provider == provider,
+            )
         )
 
     async def create_pr(self, **kwargs) -> PullRequest:
