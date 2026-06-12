@@ -239,8 +239,6 @@ class SyncService:
                 author = mr.get("author") or {}
                 reviewers = mr.get("reviewers") or []
 
-                first_review_at: Optional[datetime] = None
-
                 pr = await self.pr_repo.create_pr(
                     github_id=mr["id"],
                     provider="gitlab",
