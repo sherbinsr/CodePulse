@@ -61,7 +61,9 @@ async def debug_orgs(current_user: User = Depends(get_current_user)):
     if current_user.github_token:
         gh = GitHubService(current_user.github_token)
         user_orgs = await gh._rest_get("/user/orgs", {"per_page": 100})
-        memberships = await gh._rest_get("/user/memberships/orgs", {"state": "active", "per_page": 100})
+        memberships = await gh._rest_get(
+            "/user/memberships/orgs", {"state": "active", "per_page": 100}
+        )
         scopes_resp = await gh._rest_get_with_headers("/user")
         result["github"] = {
             "token_scopes": scopes_resp.get("x-oauth-scopes", "unknown"),
@@ -90,20 +92,32 @@ async def trigger_sync(
 ):
     """Kick off a background sync for the given organization/group."""
     if provider == "gitlab" and not current_user.gitlab_token:
-        raise HTTPException(status_code=400, detail="GitLab account not linked. Please sign in with GitLab.")
+        raise HTTPException(
+            status_code=400, detail="GitLab account not linked. Please sign in with GitLab."
+        )
     if provider == "github" and not current_user.github_token:
-        raise HTTPException(status_code=400, detail="GitHub account not linked. Please sign in with GitHub.")
+        raise HTTPException(
+            status_code=400, detail="GitHub account not linked. Please sign in with GitHub."
+        )
 
     sync_repo = SyncRepository(db)
     running = await sync_repo.get_running(org, provider)
     if running:
-        logger.info("Sync already running for org: %s provider: %s (job_id=%d)", org, provider, running.id)
+        logger.info(
+            "Sync already running for org: %s provider: %s (job_id=%d)", org, provider, running.id
+        )
         return SyncTriggerResponse(
             job_id=running.id, status=running.status, message="Sync already in progress"
         )
 
     job = await sync_repo.create(org=org, triggered_by=current_user.login, provider=provider)
-    logger.info("Sync job %d created for org: %s provider: %s by user: %s", job.id, org, provider, current_user.login)
+    logger.info(
+        "Sync job %d created for org: %s provider: %s by user: %s",
+        job.id,
+        org,
+        provider,
+        current_user.login,
+    )
 
     token = current_user.gitlab_token if provider == "gitlab" else current_user.github_token
 
@@ -127,7 +141,9 @@ async def sync_status(
     if not job:
         logger.debug("No sync job found for org: %s provider: %s", org, provider)
         return SyncStatusOut(status="never_synced")
-    logger.debug("Sync status for org %s provider %s: %s (job_id=%d)", org, provider, job.status, job.id)
+    logger.debug(
+        "Sync status for org %s provider %s: %s (job_id=%d)", org, provider, job.status, job.id
+    )
     return SyncStatusOut(
         status=job.status,
         job_id=job.id,

@@ -56,7 +56,9 @@ class GitLabService:
     async def get_user_groups(self) -> list:
         """Return all groups the authenticated user is a member of."""
         # min_access_level=10 = Guest (lowest level with any access)
-        groups = await self._get_paginated("/groups", {"min_access_level": 10, "top_level_only": True})
+        groups = await self._get_paginated(
+            "/groups", {"min_access_level": 10, "top_level_only": True}
+        )
         return [
             {
                 "login": g["path"],

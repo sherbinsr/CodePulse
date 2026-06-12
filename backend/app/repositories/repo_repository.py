@@ -11,7 +11,9 @@ class RepoRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_full_name(self, full_name: str, provider: str = "github") -> Optional[Repository]:
+    async def get_by_full_name(
+        self, full_name: str, provider: str = "github"
+    ) -> Optional[Repository]:
         result = await self.db.execute(
             select(Repository).where(
                 Repository.full_name == full_name, Repository.provider == provider

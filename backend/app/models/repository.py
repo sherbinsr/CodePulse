@@ -9,7 +9,9 @@ from app.database import Base
 
 class Repository(Base):
     __tablename__ = "repositories"
-    __table_args__ = (UniqueConstraint("full_name", "provider", name="uq_repositories_full_name_provider"),)
+    __table_args__ = (
+        UniqueConstraint("full_name", "provider", name="uq_repositories_full_name_provider"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     github_id: Mapped[Optional[int]] = mapped_column(BigInteger, index=True)

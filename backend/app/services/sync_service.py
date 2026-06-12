@@ -182,7 +182,9 @@ class SyncService:
                                 "org": org,
                                 "author_login": author_gh.get("login"),
                                 "author_avatar": author_gh.get("avatar_url"),
-                                "author_name": c.get("commit", {}).get("author", {}).get("name", ""),
+                                "author_name": c.get("commit", {})
+                                .get("author", {})
+                                .get("name", ""),
                                 "committed_at": committed_at,
                                 "synced_at": now,
                             }
@@ -192,11 +194,25 @@ class SyncService:
                 logger.error("Commit sync failed for %s (non-fatal): %s", full_name, exc)
 
             repos_synced += 1
-            logger.info("Sync job %d: completed repo %s (%d/%d)", job_id, full_name, repos_synced, len(repo_nodes))
+            logger.info(
+                "Sync job %d: completed repo %s (%d/%d)",
+                job_id,
+                full_name,
+                repos_synced,
+                len(repo_nodes),
+            )
             await self.db.commit()
 
-        await self.sync_repo.update_status(job_id, "done", repos_synced=repos_synced, prs_synced=prs_synced)
-        logger.info("Sync job %d completed: %d repos, %d PRs for org: %s", job_id, repos_synced, prs_synced, org)
+        await self.sync_repo.update_status(
+            job_id, "done", repos_synced=repos_synced, prs_synced=prs_synced
+        )
+        logger.info(
+            "Sync job %d completed: %d repos, %d PRs for org: %s",
+            job_id,
+            repos_synced,
+            prs_synced,
+            org,
+        )
 
     # ── GitLab ────────────────────────────────────────────────────────────────
 
@@ -206,7 +222,9 @@ class SyncService:
         prs_synced = 0
 
         projects = await gl.fetch_group_projects(group_path)
-        logger.info("Sync job %d: processing %d projects for group: %s", job_id, len(projects), group_path)
+        logger.info(
+            "Sync job %d: processing %d projects for group: %s", job_id, len(projects), group_path
+        )
 
         for project in projects:
             project_id = project["id"]
@@ -317,7 +335,9 @@ class SyncService:
                     now = datetime.utcnow()
                     rows = []
                     for c in commits_data:
-                        committed_at = gl.parse_datetime(c.get("committed_date") or c.get("created_at"))
+                        committed_at = gl.parse_datetime(
+                            c.get("committed_date") or c.get("created_at")
+                        )
                         if not committed_at:
                             continue
                         rows.append(
@@ -339,11 +359,17 @@ class SyncService:
 
             repos_synced += 1
             logger.info(
-                "Sync job %d: completed project %s (%d/%d)", job_id, full_name, repos_synced, len(projects)
+                "Sync job %d: completed project %s (%d/%d)",
+                job_id,
+                full_name,
+                repos_synced,
+                len(projects),
             )
             await self.db.commit()
 
-        await self.sync_repo.update_status(job_id, "done", repos_synced=repos_synced, prs_synced=prs_synced)
+        await self.sync_repo.update_status(
+            job_id, "done", repos_synced=repos_synced, prs_synced=prs_synced
+        )
         logger.info(
             "Sync job %d completed: %d projects, %d MRs for group: %s",
             job_id,
