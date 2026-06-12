@@ -31,15 +31,17 @@ def upgrade() -> None:
         sa.Column("provider", sa.String(20), nullable=False, server_default="github"),
     )
     op.create_index("ix_repositories_provider", "repositories", ["provider"])
-    # Make github_id nullable (GitLab repos won't have one)
+    # Make github_id nullable (GitLab repos won't have one) and drop its uniqueness
     op.alter_column("repositories", "github_id", existing_type=sa.BigInteger(), nullable=True)
-    # Drop old unique index on full_name alone, replace with (full_name, provider)
+    op.drop_index("ix_repositories_github_id", table_name="repositories")
+    op.create_index("ix_repositories_github_id", "repositories", ["github_id"])
+    # Replace the unique index on full_name with a non-unique index + composite unique constraint
     op.drop_index("ix_repositories_full_name", table_name="repositories")
-    op.create_index(
+    op.create_index("ix_repositories_full_name", "repositories", ["full_name"])
+    op.create_unique_constraint(
         "uq_repositories_full_name_provider",
         "repositories",
         ["full_name", "provider"],
-        unique=True,
     )
 
     # ── pull_requests ───────────────────────────────────────────────────────
@@ -97,8 +99,11 @@ def downgrade() -> None:
     op.drop_index("ix_pull_requests_provider", table_name="pull_requests")
     op.drop_column("pull_requests", "provider")
 
-    op.drop_index("uq_repositories_full_name_provider", table_name="repositories")
+    op.drop_constraint("uq_repositories_full_name_provider", "repositories", type_="unique")
+    op.drop_index("ix_repositories_full_name", table_name="repositories")
     op.create_index("ix_repositories_full_name", "repositories", ["full_name"], unique=True)
+    op.drop_index("ix_repositories_github_id", table_name="repositories")
+    op.create_index("ix_repositories_github_id", "repositories", ["github_id"], unique=True)
     op.alter_column("repositories", "github_id", existing_type=sa.BigInteger(), nullable=False)
     op.drop_index("ix_repositories_provider", table_name="repositories")
     op.drop_column("repositories", "provider")
