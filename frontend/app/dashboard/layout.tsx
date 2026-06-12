@@ -12,18 +12,20 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const urlOrg = params.get("org") ?? "";
+  const urlProvider = (params.get("provider") ?? "github") as "github" | "gitlab";
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [org, setOrg] = useState(urlOrg);
+  const [provider, setProvider] = useState<"github" | "gitlab">(urlProvider);
   const [loading, setLoading] = useState(true);
 
-  // Sync org into URL whenever it changes
   useEffect(() => {
     if (!org) return;
-    const current = params.get("org");
-    if (current !== org) {
-      router.replace(`${pathname}?org=${org}`);
+    const currentOrg = params.get("org");
+    const currentProvider = params.get("provider") ?? "github";
+    if (currentOrg !== org || currentProvider !== provider) {
+      router.replace(`${pathname}?org=${org}&provider=${provider}`);
     }
-  }, [org]);
+  }, [org, provider]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const token = getToken();
@@ -34,8 +36,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         setOrgs(data);
         if (urlOrg) {
           setOrg(urlOrg);
+          setProvider(urlProvider);
         } else if (data.length > 0) {
           setOrg(data[0].login);
+          setProvider(data[0].provider as "github" | "gitlab");
         }
         setLoading(false);
       })
@@ -43,29 +47,29 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         logout();
         router.push("/");
       });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-sync org state when URL changes (e.g. after "Check again" refreshes the org list)
   useEffect(() => {
-    if (urlOrg && urlOrg !== org) {
+    if (urlOrg && (urlOrg !== org || urlProvider !== provider)) {
       setOrg(urlOrg);
+      setProvider(urlProvider);
       listOrgs().then(setOrgs).catch(() => {});
     }
-  }, [urlOrg]);
+  }, [urlOrg, urlProvider]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleOrgChange = (newOrg: string) => {
+  const handleOrgChange = (newOrg: string, newProvider: "github" | "gitlab" = "github") => {
     setOrg(newOrg);
-    router.replace(`${pathname}?org=${newOrg}`);
-    triggerSync(newOrg).catch(() => {}); // fire-and-forget; backend deduplicates if already running
+    setProvider(newProvider);
+    router.replace(`${pathname}?org=${newOrg}&provider=${newProvider}`);
+    triggerSync(newOrg, newProvider).catch(() => {});
   };
 
   const handleRefreshOrgs = async () => {
     try {
       const data = await listOrgs();
       setOrgs(data);
-      // If a new org appeared and nothing is selected yet, auto-select it
       if (!org && data.length > 0) {
-        handleOrgChange(data[0].login);
+        handleOrgChange(data[0].login, data[0].provider as "github" | "gitlab");
       }
     } catch {}
   };
@@ -82,7 +86,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Sidebar org={org} hasOrg={hasOrg} orgs={orgs} onOrgChange={handleOrgChange} onRefreshOrgs={handleRefreshOrgs} />
+      <Sidebar
+        org={org}
+        provider={provider}
+        hasOrg={hasOrg}
+        orgs={orgs}
+        onOrgChange={handleOrgChange}
+        onRefreshOrgs={handleRefreshOrgs}
+      />
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1">{children}</main>
       </div>

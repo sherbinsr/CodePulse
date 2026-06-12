@@ -144,6 +144,7 @@ function DigestPreview({ digest, org }: { digest: DigestData; org: string }) {
 function DigestContent() {
   const params = useSearchParams();
   const org = params.get("org") ?? "";
+  const provider = (params.get("provider") ?? "github") as "github" | "gitlab";
   const [period, setPeriod] = useState("1w");
   const [digest, setDigest] = useState<DigestData | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
@@ -159,7 +160,7 @@ function DigestContent() {
     setLoading(true);
     setError(null);
     try {
-      const [data, sync] = await Promise.all([getDigest(org, period), getSyncStatus(org)]);
+      const [data, sync] = await Promise.all([getDigest(org, period), getSyncStatus(org, provider)]);
       if (req !== reqRef.current) return;
       setDigest(data);
       setSyncStatus(sync);
@@ -226,6 +227,7 @@ function DigestContent() {
         <Header
           title="Digest"
           org={org}
+          provider={provider}
           user={user}
           syncStatus={syncStatus}
           onSyncComplete={load}

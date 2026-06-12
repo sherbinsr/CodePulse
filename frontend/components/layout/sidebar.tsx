@@ -33,13 +33,14 @@ const navItems: NavItem[] = [
 
 interface SidebarProps {
   org: string;
+  provider?: "github" | "gitlab";
   hasOrg: boolean;
   orgs?: Org[];
-  onOrgChange?: (org: string) => void;
+  onOrgChange?: (org: string, provider: "github" | "gitlab") => void;
   onRefreshOrgs?: () => Promise<void>;
 }
 
-export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: SidebarProps) {
+export function Sidebar({ org, provider = "github", hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -85,18 +86,35 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
           {orgs.length > 1 ? (
             <div className="relative">
               <select
-                value={org}
-                onChange={(e) => onOrgChange?.(e.target.value)}
+                value={`${org}:${provider}`}
+                onChange={(e) => {
+                  const [login, prov] = e.target.value.split(":");
+                  onOrgChange?.(login, prov as "github" | "gitlab");
+                }}
                 className="w-full appearance-none bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-100 text-sm font-medium rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-colors"
               >
                 {orgs.map((o) => (
-                  <option key={o.login} value={o.login}>{o.login}</option>
+                  <option key={`${o.login}:${o.provider}`} value={`${o.login}:${o.provider}`}>
+                    {o.login} {o.provider === "gitlab" ? "(GL)" : "(GH)"}
+                  </option>
                 ))}
               </select>
               <ChevronsUpDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             </div>
           ) : (
-            <p className="text-slate-100 text-sm font-medium truncate">{org || "—"}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-slate-100 text-sm font-medium truncate">{org || "—"}</p>
+              {org && (
+                <span className={cn(
+                  "shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded",
+                  provider === "gitlab"
+                    ? "bg-orange-500/20 text-orange-400"
+                    : "bg-indigo-500/20 text-indigo-400"
+                )}>
+                  {provider === "gitlab" ? "GL" : "GH"}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -122,7 +140,7 @@ export function Sidebar({ org, hasOrg, orgs = [], onOrgChange, onRefreshOrgs }: 
             return (
               <Link
                 key={href}
-                href={org ? `${href}?org=${org}` : href}
+                href={org ? `${href}?org=${org}&provider=${provider}` : href}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   isActive

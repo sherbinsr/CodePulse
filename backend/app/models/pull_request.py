@@ -11,7 +11,8 @@ class PullRequest(Base):
     __tablename__ = "pull_requests"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    github_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    github_id: Mapped[Optional[int]] = mapped_column(BigInteger, index=True)
+    provider: Mapped[str] = mapped_column(String(20), default="github", nullable=False, index=True)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     repo_full_name: Mapped[str] = mapped_column(String(512), index=True, nullable=False)
     org: Mapped[str] = mapped_column(String(255), index=True, nullable=False)

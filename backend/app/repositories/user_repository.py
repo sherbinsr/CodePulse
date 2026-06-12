@@ -17,6 +17,10 @@ class UserRepository:
         result = await self.db.execute(select(User).where(User.github_id == github_id))
         return result.scalar_one_or_none()
 
+    async def get_by_gitlab_id(self, gitlab_id: int) -> Optional[User]:
+        result = await self.db.execute(select(User).where(User.gitlab_id == gitlab_id))
+        return result.scalar_one_or_none()
+
     async def get_by_login(self, login: str) -> Optional[User]:
         result = await self.db.execute(select(User).where(User.login == login))
         return result.scalar_one_or_none()

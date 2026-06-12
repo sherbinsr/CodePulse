@@ -104,18 +104,26 @@ function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) 
   );
 }
 
-function OrgSelector({ orgs, onSelect }: { orgs: Org[]; onSelect: (org: string) => void }) {
+function ProviderBadge({ provider }: { provider: "github" | "gitlab" }) {
+  return provider === "gitlab" ? (
+    <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600">GitLab</span>
+  ) : (
+    <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">GitHub</span>
+  );
+}
+
+function OrgSelector({ orgs, onSelect }: { orgs: Org[]; onSelect: (org: string, provider: "github" | "gitlab") => void }) {
   return (
     <div className="max-w-2xl mx-auto mt-12">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-2">Select an Organization</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Choose an organization to view analytics</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Choose a GitHub organization or GitLab group to view analytics</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {orgs.map((org) => (
           <button
-            key={org.login}
-            onClick={() => onSelect(org.login)}
+            key={`${org.login}:${org.provider}`}
+            onClick={() => onSelect(org.login, org.provider)}
             className="flex items-center gap-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md p-5 text-left transition-all group"
           >
             {org.avatar_url ? (
@@ -132,9 +140,12 @@ function OrgSelector({ orgs, onSelect }: { orgs: Org[]; onSelect: (org: string) 
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
-                {org.login}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors truncate">
+                  {org.login}
+                </p>
+                <ProviderBadge provider={org.provider} />
+              </div>
               {org.description && (
                 <p className="text-xs text-slate-400 truncate mt-0.5">{org.description}</p>
               )}
@@ -153,6 +164,7 @@ function DashboardContent() {
   const params = useSearchParams();
   const router = useRouter();
   const org = params.get("org") ?? "";
+  const provider = (params.get("provider") ?? "github") as "github" | "gitlab";
 
   const [overview, setOverview] = useState<OrgOverview | null>(null);
   const [devStats, setDevStats] = useState<DeveloperStat[]>([]);
@@ -178,7 +190,7 @@ function DashboardContent() {
         getOrgOverview(org),
         getDeveloperStats(org),
         getMonthlyTrends(org, 6),
-        getSyncStatus(org),
+        getSyncStatus(org, provider),
       ]);
       if (req !== reqRef.current) return;
       setOverview(ov);
@@ -215,7 +227,7 @@ function DashboardContent() {
     try {
       const data = await listOrgs();
       setOrgs(data);
-      if (data.length > 0) router.replace(`/dashboard?org=${data[0].login}`);
+      if (data.length > 0) router.replace(`/dashboard?org=${data[0].login}&provider=${data[0].provider}`);
     } catch {
       setOrgs([]);
     } finally {
@@ -234,8 +246,9 @@ function DashboardContent() {
     }
   }, [org, loadData, loadOrgs]);
 
-  const handleSelectOrg = (selected: string) => {
-    router.replace(`/dashboard?org=${selected}`);
+  const handleSelectOrg = (selected: string, selectedProvider?: "github" | "gitlab") => {
+    const prov = selectedProvider ?? orgs.find(o => o.login === selected)?.provider ?? "github";
+    router.replace(`/dashboard?org=${selected}&provider=${prov}`);
   };
 
   // --- No org state ---
@@ -256,7 +269,7 @@ function DashboardContent() {
         <div className="flex-1 p-6">
           {orgsLoaded && orgs.length === 0 && <GrantPermissionBanner onCheckAgain={refreshOrgs} />}
           {orgsLoaded && orgs.length > 0 && (
-            <OrgSelector orgs={orgs} onSelect={handleSelectOrg} />
+            <OrgSelector orgs={orgs} onSelect={(login, prov) => handleSelectOrg(login, prov)} />
           )}
         </div>
       </div>
@@ -269,6 +282,7 @@ function DashboardContent() {
       <Header
         title={`${org} — Overview`}
         org={org}
+        provider={provider}
         user={user}
         syncStatus={syncStatus}
         onSyncComplete={loadData}

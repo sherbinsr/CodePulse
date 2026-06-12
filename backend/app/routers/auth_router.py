@@ -23,6 +23,16 @@ async def github_callback(
     return await AuthService(db).github_callback(body.code)
 
 
+@router.post("/gitlab/callback", response_model=AuthResponse)
+async def gitlab_callback(
+    body: AuthCallbackRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Exchange GitLab OAuth code for a JWT."""
+    logger.info("GitLab OAuth callback received")
+    return await AuthService(db).gitlab_callback(body.code)
+
+
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Return the authenticated user's profile."""

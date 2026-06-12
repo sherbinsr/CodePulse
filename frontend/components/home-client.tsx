@@ -1,12 +1,18 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getToken, getGitHubOAuthUrl } from "@/lib/auth";
+import { getToken, getGitHubOAuthUrl, getGitLabOAuthUrl } from "@/lib/auth";
 import { GitBranch, BarChart3, Users, Clock, Zap } from "lucide-react";
 
 const GitHubIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+  </svg>
+);
+
+const GitLabIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 00-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 00-.867 0L1.386 9.449.044 13.587a.924.924 0 00.331 1.023L12 23.054l11.625-8.443a.924.924 0 00.33-1.024" />
   </svg>
 );
 
@@ -25,8 +31,12 @@ export default function HomeClient() {
     if (getToken()) router.push("/dashboard");
   }, [router]);
 
-  const handleLogin = () => {
+  const handleGitHubLogin = () => {
     window.location.href = getGitHubOAuthUrl();
+  };
+
+  const handleGitLabLogin = () => {
+    window.location.href = getGitLabOAuthUrl();
   };
 
   return (
@@ -40,14 +50,24 @@ export default function HomeClient() {
             <GitBranch className="h-6 w-6 text-indigo-400" aria-hidden="true" />
             <span className="text-white font-bold text-xl">CodePulse</span>
           </a>
-          <button
-            onClick={handleLogin}
-            className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2 rounded-lg font-medium hover:bg-slate-100 transition-colors"
-            aria-label="Connect your GitHub account"
-          >
-            <GitHubIcon className="h-4 w-4" />
-            Connect GitHub
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGitHubLogin}
+              className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2 rounded-lg font-medium hover:bg-slate-100 transition-colors"
+              aria-label="Connect your GitHub account"
+            >
+              <GitHubIcon className="h-4 w-4" />
+              GitHub
+            </button>
+            <button
+              onClick={handleGitLabLogin}
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              aria-label="Connect your GitLab account"
+            >
+              <GitLabIcon className="h-4 w-4" />
+              GitLab
+            </button>
+          </div>
         </nav>
       </header>
 
@@ -64,18 +84,28 @@ export default function HomeClient() {
           </h1>
 
           <p className="text-slate-400 text-lg mb-10 max-w-xl mx-auto">
-            Connect your GitHub organization and get instant analytics on pull requests,
+            Connect your GitHub or GitLab organization and get instant analytics on pull requests,
             code reviews, developer performance, and team velocity — all in one dashboard.
           </p>
 
-          <button
-            onClick={handleLogin}
-            className="inline-flex items-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg shadow-indigo-500/25"
-            aria-label="Get started by connecting your GitHub account"
-          >
-            <GitHubIcon className="h-5 w-5" />
-            Get Started with GitHub
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={handleGitHubLogin}
+              className="inline-flex items-center gap-3 bg-white hover:bg-slate-100 text-slate-900 px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg"
+              aria-label="Get started by connecting your GitHub account"
+            >
+              <GitHubIcon className="h-5 w-5" />
+              Continue with GitHub
+            </button>
+            <button
+              onClick={handleGitLabLogin}
+              className="inline-flex items-center gap-3 bg-orange-500 hover:bg-orange-400 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg shadow-orange-500/25"
+              aria-label="Get started by connecting your GitLab account"
+            >
+              <GitLabIcon className="h-5 w-5" />
+              Continue with GitLab
+            </button>
+          </div>
         </div>
 
         <section

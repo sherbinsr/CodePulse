@@ -35,6 +35,7 @@ function PassRateBadge({ rate }: { rate: number }) {
 function CIContent() {
   const params = useSearchParams();
   const org = params.get("org") ?? "";
+  const provider = (params.get("provider") ?? "github") as "github" | "gitlab";
   const [summary, setSummary] = useState<CISummary[]>([]);
   const [trends, setTrends] = useState<BuildTrend[]>([]);
   const [flaky, setFlaky] = useState<FlakyWorkflow[]>([]);
@@ -52,7 +53,7 @@ function CIContent() {
         getCISummary(org),
         getBuildTrends(org),
         getFlakyWorkflows(org),
-        getSyncStatus(org),
+        getSyncStatus(org, provider),
       ]);
       setSummary(s);
       setTrends(t);
@@ -88,7 +89,7 @@ function CIContent() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
-      <Header title="CI Insights" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
+      <Header title="CI Insights" org={org} provider={provider} user={user} syncStatus={syncStatus} onSyncComplete={load} />
       <div className="flex-1 p-6 overflow-auto space-y-6">
         {!org && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 text-slate-600 dark:text-slate-300 text-sm">

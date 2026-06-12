@@ -9,6 +9,7 @@ import type { User, SyncStatus } from "@/types";
 interface HeaderProps {
   title: string;
   org: string;
+  provider?: "github" | "gitlab";
   user: User | null;
   syncStatus?: SyncStatus | null;
   onSyncComplete?: () => void;
@@ -38,19 +39,18 @@ function SyncPill({ status }: { status: SyncStatus["status"] | undefined }) {
   );
 }
 
-export function Header({ title, org, user, syncStatus, onSyncComplete }: HeaderProps) {
+export function Header({ title, org, provider = "github", user, syncStatus, onSyncComplete }: HeaderProps) {
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = async () => {
     if (!org) return;
     setSyncing(true);
     try {
-      await triggerSync(org);
+      await triggerSync(org, provider);
       toast.info(`Syncing ${org}… this may take a minute.`);
 
-      // Poll until done
       const poll = setInterval(async () => {
-        const status = await getSyncStatus(org);
+        const status = await getSyncStatus(org, provider);
         if (status.status === "done") {
           clearInterval(poll);
           setSyncing(false);

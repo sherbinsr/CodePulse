@@ -15,6 +15,7 @@ import {
 function DevelopersContent() {
   const params = useSearchParams();
   const org = params.get("org") ?? "";
+  const provider = (params.get("provider") ?? "github") as "github" | "gitlab";
   const [devs, setDevs] = useState<DeveloperStat[]>([]);
   const [selected, setSelected] = useState<DeveloperStat | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
@@ -29,7 +30,7 @@ function DevelopersContent() {
     setLoading(true);
     setError(null);
     try {
-      const [data, sync] = await Promise.all([getDeveloperStats(org), getSyncStatus(org)]);
+      const [data, sync] = await Promise.all([getDeveloperStats(org), getSyncStatus(org, provider)]);
       if (req !== reqRef.current) return;
       setDevs(data);
       setSyncStatus(sync);
@@ -61,7 +62,7 @@ function DevelopersContent() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
-      <Header title="Developer Analytics" org={org} user={user} syncStatus={syncStatus} onSyncComplete={load} />
+      <Header title="Developer Analytics" org={org} provider={provider} user={user} syncStatus={syncStatus} onSyncComplete={load} />
       <div className="flex-1 p-6 overflow-auto">
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-sm">{error}</div>

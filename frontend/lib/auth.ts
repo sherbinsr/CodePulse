@@ -33,3 +33,10 @@ export function getGitHubOAuthUrl(): string {
   const scope = encodeURIComponent("read:org repo read:user user:email");
   return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 }
+
+export function getGitLabOAuthUrl(): string {
+  const clientId = process.env.NEXT_PUBLIC_GITLAB_CLIENT_ID!;
+  const redirectUri = encodeURIComponent(`${window.location.origin}/auth/gitlab/callback`);
+  const scope = encodeURIComponent("read_api read_user read_repository");
+  return `https://gitlab.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+}

@@ -11,7 +11,8 @@ class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    github_run_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    github_run_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+    provider: Mapped[str] = mapped_column(String(20), default="github", nullable=False, index=True)
     repo_full_name: Mapped[str] = mapped_column(String(512), index=True, nullable=False)
     org: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     workflow_name: Mapped[str] = mapped_column(String(255), nullable=False)
