@@ -171,3 +171,23 @@ export interface SyncStatus {
   started_at?: string;
   finished_at?: string;
 }
+
+export interface RepoDoc {
+  repo_name: string;
+  title: string;
+  summary: string;
+  markdown: string;
+  total_prs: number;
+  contributors: number;
+  primary_language?: string | null;
+  stars: number;
+  forks: number;
+}
+
+export interface DocGenResponse {
+  org: string;
+  generated_at: string;
+  docs: RepoDoc[];
+  combined_markdown: string;
+}
+

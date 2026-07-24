@@ -62,6 +62,7 @@ PROTECTED = [
     ("GET", "/api/analytics/acme/trends"),
     ("GET", "/api/analytics/acme/repositories"),
     ("GET", "/api/analytics/acme/prs"),
+    ("POST", "/api/analytics/acme/docs/generate"),
 ]
 
 

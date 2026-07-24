@@ -3,6 +3,7 @@ import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
   ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
   CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
+  DocGenResponse,
 } from "@/types";
 
 const api = axios.create({
@@ -117,4 +118,18 @@ export const getDigest = async (org: string, period: string): Promise<DigestData
   return data;
 };
 
+export const generateRepoDocs = async (
+  org: string,
+  repos: string[],
+  openaiApiKey?: string
+): Promise<DocGenResponse> => {
+  const { data } = await api.post(`/api/analytics/${org}/docs/generate`, {
+    repos,
+    openai_api_key: openaiApiKey || undefined,
+  });
+  return data;
+};
+
+
 export default api;
+

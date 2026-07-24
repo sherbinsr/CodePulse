@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     github_graphql_url: str = "https://api.github.com/graphql"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+    openai_api_key: str = ""
 
     class Config:
         env_file = ".env"

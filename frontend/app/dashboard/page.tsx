@@ -10,11 +10,13 @@ import { ContributorLeaderboard } from "@/components/dashboard/contributor-leade
 import { ReviewTimeChart } from "@/components/dashboard/review-time-chart";
 import {
   getOrgOverview, getDeveloperStats, getMonthlyTrends, getSyncStatus, listOrgs,
+  getRepoStats, generateRepoDocs,
 } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatHours, getApiError } from "@/lib/utils";
-import type { OrgOverview, DeveloperStat, MonthlyTrend, SyncStatus, User, Org } from "@/types";
-import { GitPullRequest, GitMerge, Clock, Users, Star, BarChart3, Layers, ShieldAlert, Building2 } from "lucide-react";
+import type { OrgOverview, DeveloperStat, MonthlyTrend, SyncStatus, User, Org, RepoStat, DocGenResponse } from "@/types";
+import { GitPullRequest, GitMerge, Clock, Users, Star, BarChart3, Layers, ShieldAlert, Building2, Sparkles, BookOpen, CheckSquare, Square, FileText } from "lucide-react";
+import { DocGeneratorModal } from "@/components/dashboard/doc-generator-modal";
 
 function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) {
   const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID!;
@@ -169,6 +171,8 @@ function DashboardContent() {
   const [overview, setOverview] = useState<OrgOverview | null>(null);
   const [devStats, setDevStats] = useState<DeveloperStat[]>([]);
   const [trends, setTrends] = useState<MonthlyTrend[]>([]);
+  const [repos, setRepos] = useState<RepoStat[]>([]);
+  const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -176,6 +180,12 @@ function DashboardContent() {
   const [orgsLoaded, setOrgsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Documentation modal state
+  const [docModalOpen, setDocModalOpen] = useState(false);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
+  const [docData, setDocData] = useState<DocGenResponse | null>(null);
 
   const reqRef = useRef(0);
 
@@ -186,16 +196,18 @@ function DashboardContent() {
     setLoading(true);
     setError(null);
     try {
-      const [ov, devs, tr, sync] = await Promise.all([
+      const [ov, devs, tr, rp, sync] = await Promise.all([
         getOrgOverview(org),
         getDeveloperStats(org),
         getMonthlyTrends(org, 6),
+        getRepoStats(org),
         getSyncStatus(org, provider),
       ]);
       if (req !== reqRef.current) return;
       setOverview(ov);
       setDevStats(devs);
       setTrends(tr);
+      setRepos(rp);
       setSyncStatus(sync);
     } catch (e: unknown) {
       if (req !== reqRef.current) return;
@@ -203,7 +215,38 @@ function DashboardContent() {
     } finally {
       if (req === reqRef.current) setLoading(false);
     }
-  }, [org]);
+  }, [org, provider]);
+
+  const handleGenerateDocs = async (targetRepos?: string[], overrideApiKey?: string) => {
+    const reposToGen = targetRepos ?? selectedRepos;
+    const keyToUse = overrideApiKey !== undefined ? overrideApiKey : (typeof window !== "undefined" ? localStorage.getItem("openai_api_key") || undefined : undefined);
+    setDocModalOpen(true);
+    setDocLoading(true);
+    setDocError(null);
+    try {
+      const res = await generateRepoDocs(org, reposToGen, keyToUse);
+      setDocData(res);
+    } catch (e: unknown) {
+      setDocError(getApiError(e, "Failed to generate documentation."));
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
+  const toggleSelectRepo = (repoName: string) => {
+    setSelectedRepos((prev) =>
+      prev.includes(repoName) ? prev.filter((r) => r !== repoName) : [...prev, repoName]
+    );
+  };
+
+  const toggleSelectAllRepos = () => {
+    if (selectedRepos.length === repos.length) {
+      setSelectedRepos([]);
+    } else {
+      setSelectedRepos(repos.map((r) => r.name));
+    }
+  };
+
 
   // Load orgs list when no org selected
   const loadOrgs = useCallback(async () => {
@@ -329,6 +372,77 @@ function DashboardContent() {
             </div>
 
             <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Documentation Generator</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Select repositories to automatically generate comprehensive production docs on click</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSelectAllRepos}
+                    className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1"
+                  >
+                    {selectedRepos.length === repos.length ? "Deselect All" : "Select All"}
+                  </button>
+                  <button
+                    onClick={() => handleGenerateDocs()}
+                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {selectedRepos.length > 0
+                      ? `Generate Docs for ${selectedRepos.length} Repos`
+                      : "Generate Docs for All Repos"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {repos.map((repo) => {
+                    const isSelected = selectedRepos.includes(repo.name);
+                    return (
+                      <div
+                        key={repo.repo}
+                        onClick={() => toggleSelectRepo(repo.name)}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700 shadow-xs"
+                            : "bg-slate-50/50 dark:bg-slate-800/40 border-slate-200/60 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isSelected ? (
+                            <CheckSquare className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                          ) : (
+                            <Square className="h-4 w-4 text-slate-400 shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                              {repo.name}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {repo.total_prs} PRs • {repo.contributors} contribs
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerateDocs([repo.name]);
+                          }}
+                          title="Generate docs for this repo"
+                          className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors shrink-0 ml-1"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
               <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Trends &amp; Performance</p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <PRTrendChart data={trends} />
@@ -343,6 +457,16 @@ function DashboardContent() {
           </>
         )}
       </div>
+
+      <DocGeneratorModal
+        isOpen={docModalOpen}
+        onClose={() => setDocModalOpen(false)}
+        loading={docLoading}
+        error={docError}
+        data={docData}
+        selectedRepoCount={selectedRepos.length}
+        onRegenerate={(key) => handleGenerateDocs(undefined, key)}
+      />
     </div>
   );
 }

@@ -132,3 +132,28 @@ class DigestOut(BaseModel):
     total_reviews: int
     top_contributors: list[DigestContributorOut]
     top_repos: list[DigestRepoOut]
+
+
+class DocGenRequest(BaseModel):
+    repos: list[str]
+    openai_api_key: Optional[str] = None
+
+
+class RepoDocOut(BaseModel):
+    repo_name: str
+    title: str
+    summary: str
+    markdown: str
+    total_prs: int
+    contributors: int
+    primary_language: Optional[str] = None
+    stars: int = 0
+    forks: int = 0
+
+
+class DocGenResponse(BaseModel):
+    org: str
+    generated_at: str
+    docs: list[RepoDocOut]
+    combined_markdown: str
+

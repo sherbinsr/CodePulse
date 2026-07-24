@@ -14,6 +14,8 @@ from app.schemas.analytics import (
     CommitActivityOut,
     DeveloperStatOut,
     DigestOut,
+    DocGenRequest,
+    DocGenResponse,
     FlakyWorkflowOut,
     MonthlyTrendOut,
     OrgOverviewOut,
@@ -145,3 +147,24 @@ async def pr_list(
 ):
     logger.info("GET PR list for org=%s user=%s", org, current_user.login)
     return await AnalyticsService(db).get_pr_list(org, repo, author, state, limit, offset)
+
+
+@router.post("/{org}/docs/generate", response_model=DocGenResponse)
+async def generate_repo_docs(
+    org: str,
+    body: DocGenRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info(
+        "POST generate-docs for org=%s repos=%s user=%s (has_openai_key=%s)",
+        org,
+        body.repos,
+        current_user.login,
+        bool(body.openai_api_key),
+    )
+    return await AnalyticsService(db).generate_repo_docs(
+        org, body.repos, openai_api_key=body.openai_api_key
+    )
+
+
