@@ -17,9 +17,17 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
+    # AWS S3 Settings
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
+    s3_bucket_name: str = "codepulse-documentation"
+    s3_endpoint_url: str = ""
+
     class Config:
         env_file = ".env"
         extra = "ignore"
 
 
 settings = Settings()
+

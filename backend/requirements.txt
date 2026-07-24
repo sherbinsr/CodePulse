@@ -10,3 +10,6 @@ pydantic-settings==2.7.0
 pydantic==2.10.3
 aiohttp==3.11.10
 python-multipart==0.0.20
+boto3>=1.34.0
+
+

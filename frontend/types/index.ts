@@ -171,3 +171,32 @@ export interface SyncStatus {
   started_at?: string;
   finished_at?: string;
 }
+
+export interface Documentation {
+  id: number;
+  repository_id: number;
+  file_name: string;
+  file_type: string;
+  s3_bucket: string;
+  s3_key: string;
+  s3_url: string | null;
+  content: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepositoryWithDocs {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: string;
+  provider: string;
+  description: string | null;
+  language: string | null;
+  stars: number;
+  forks: number;
+  synced_at: string | null;
+  has_documentation: boolean;
+  documentations: Documentation[];
+}
+

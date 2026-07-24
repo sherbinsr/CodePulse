@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   GitPullRequest, Users, GitBranch, Star, Home, LogOut, ChevronsUpDown, RefreshCw,
-  FileText, Zap, GitCommit,
+  FileText, Zap, GitCommit, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -23,6 +23,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard",               icon: Home,           label: "Overview",       requiresOrg: false },
   { href: "/dashboard/repositories",  icon: GitBranch,      label: "Repositories",   requiresOrg: true },
+  { href: "/dashboard/documentations",icon: BookOpen,       label: "Documentation",  requiresOrg: true },
   { href: "/dashboard/developers",    icon: Users,          label: "Developers",     requiresOrg: true },
   { href: "/dashboard/reviews",       icon: Star,           label: "Reviews",        requiresOrg: true },
   { href: "/dashboard/pr-insights",   icon: GitPullRequest, label: "PR Insights",    requiresOrg: true },
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/commit-activity", icon: GitCommit,    label: "Commit Activity",requiresOrg: true },
   { href: "/dashboard/digest",        icon: FileText,       label: "Digest",         requiresOrg: true },
 ];
+
 
 interface SidebarProps {
   org: string;

@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import analytics_router, auth_router, org_router
+from app.routers import analytics_router, auth_router, documentation_router, org_router
+
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -65,6 +66,8 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(org_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
+app.include_router(documentation_router, prefix="/api")
+
 
 
 @app.get("/health", tags=["Health"])

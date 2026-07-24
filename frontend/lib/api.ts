@@ -3,7 +3,9 @@ import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
   ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
   CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
+  Documentation, RepositoryWithDocs,
 } from "@/types";
+
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
@@ -117,4 +119,54 @@ export const getDigest = async (org: string, period: string): Promise<DigestData
   return data;
 };
 
+// Documentations (S3)
+export const getDocumentationRepos = async (
+  org: string,
+  provider: "github" | "gitlab" = "github"
+): Promise<RepositoryWithDocs[]> => {
+  const { data } = await api.get(`/api/documentations?org=${org}&provider=${provider}`);
+  return data;
+};
+
+export const getDocumentationContent = async (docId: number): Promise<string> => {
+  const { data } = await api.get(`/api/documentations/${docId}/content`, {
+    transformResponse: [(d) => d],
+  });
+  return data;
+};
+
+export const createDocumentation = async (
+  repoId: number,
+  payload: { file_name: string; file_type?: string; content: string }
+): Promise<Documentation> => {
+  const { data } = await api.post(`/api/documentations/repo/${repoId}`, payload);
+  return data;
+};
+
+export const uploadDocumentationFile = async (
+  repoId: number,
+  file: File
+): Promise<Documentation> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await api.post(`/api/documentations/repo/${repoId}/upload`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+};
+
+export const updateDocumentation = async (
+  docId: number,
+  payload: { file_name?: string; content?: string }
+): Promise<Documentation> => {
+  const { data } = await api.put(`/api/documentations/${docId}`, payload);
+  return data;
+};
+
+export const deleteDocumentation = async (docId: number): Promise<{ message: string; id: number }> => {
+  const { data } = await api.delete(`/api/documentations/${docId}`);
+  return data;
+};
+
 export default api;
+
