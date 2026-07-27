@@ -10,6 +10,7 @@ export interface Org {
   avatar_url: string | null;
   description: string | null;
   provider: "github" | "gitlab";
+  is_custom?: boolean;
 }
 
 export interface OrgOverview {
@@ -199,4 +200,128 @@ export interface RepositoryWithDocs {
   has_documentation: boolean;
   documentations: Documentation[];
 }
+
+export interface Assignee {
+  login: string;
+  avatar_url?: string | null;
+}
+
+export interface IssueLabel {
+  name: string;
+  color?: string | null;
+}
+
+export interface GitHubIssue {
+  id: number;
+  github_id: string;
+  number: number;
+  repo_name: string;
+  owner: string;
+  title: string;
+  body?: string | null;
+  state: "open" | "closed";
+  author_login: string;
+  author_avatar?: string | null;
+  assignees: Assignee[];
+  labels: IssueLabel[];
+  milestone?: string | null;
+  priority?: string | null;
+  comments_count: number;
+  created_at: string;
+  updated_at: string;
+  closed_at?: string | null;
+}
+
+export interface ProjectItem {
+  id: number;
+  github_id: string;
+  status: string;
+  status_option_id?: string | null;
+  position: number;
+  issue: GitHubIssue;
+}
+
+export interface ProjectColumnOption {
+  id: string;
+  name: string;
+}
+
+export interface ProjectV2 {
+  id: number;
+  github_id: string;
+  org: string;
+  title: string;
+  number: number;
+  url?: string | null;
+  closed: boolean;
+  status_field_id?: string | null;
+  columns: ProjectColumnOption[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectBoard {
+  project: ProjectV2;
+  items: ProjectItem[];
+}
+
+export interface IssueComment {
+  id: number;
+  body: string;
+  user: {
+    login: string;
+    avatar_url?: string | null;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IssueTimelineDetails {
+  comments: IssueComment[];
+  linked_prs: Array<{ title: string; number: number; url: string; state: string }>;
+  commits: Array<{ sha: string; url: string }>;
+  timeline_events_count: number;
+}
+
+export interface RepoProject {
+  id: number;
+  org: string;
+  repo_name: string;
+  repository_id?: number | null;
+  name: string;
+  description?: string | null;
+  key_prefix?: string | null;
+  status: "active" | "completed" | "archived";
+  columns: ProjectColumnOption[];
+  tasks_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectTask {
+  id: number;
+  project_id: number;
+  issue_id?: number | null;
+  ticket_key?: string | null;
+  title: string;
+  description?: string | null;
+  status: string;
+  priority: "Low" | "Medium" | "High" | "Critical";
+  assignees: Assignee[];
+  labels: IssueLabel[];
+  story_points: number;
+  due_date?: string | null;
+  position: number;
+  issue?: GitHubIssue | null;
+  created_at: string;
+  updated_at: string;
+}
+
+
+export interface RepoProjectBoard {
+  project: RepoProject;
+  tasks: ProjectTask[];
+}
+
+
 

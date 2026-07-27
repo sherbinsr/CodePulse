@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: codepulse-postgres-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-codepulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codepulse}
+      POSTGRES_DB: ${POSTGRES_DB:-codepulse}
+    ports:
+      - "5432:5432"
+    volumes:
+      - codepulse_postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-codepulse} -d $${POSTGRES_DB:-codepulse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codepulse_prod_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codepulse-backend-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-codepulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codepulse}
+      POSTGRES_DB: ${POSTGRES_DB:-codepulse}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-codepulse}:${POSTGRES_PASSWORD:-codepulse}@postgres:5432/${POSTGRES_DB:-codepulse}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    networks:
+      - codepulse_prod_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_GITHUB_CLIENT_ID: ${NEXT_PUBLIC_GITHUB_CLIENT_ID}
+        NEXT_PUBLIC_GITLAB_CLIENT_ID: ${NEXT_PUBLIC_GITLAB_CLIENT_ID}
+    container_name: codepulse-frontend-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - codepulse_prod_network
+
+volumes:
+  codepulse_postgres_prod_data:
+    driver: local
+
+networks:
+  codepulse_prod_network:
+    driver: bridge

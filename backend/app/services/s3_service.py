@@ -46,7 +46,7 @@ class S3Service:
         content: Union[bytes, str],
         content_type: str = "text/markdown; charset=utf-8",
     ) -> dict:
-        """Upload content to S3 (or local fallback) and return s3 metadata."""
+        """Upload content directly to S3 (or local fallback) and return s3 metadata."""
         if isinstance(content, str):
             body_bytes = content.encode("utf-8")
         else:

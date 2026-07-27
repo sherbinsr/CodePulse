@@ -28,22 +28,18 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
             <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-2.5 mb-1" {...props} />
           ),
           p: ({ node, ...props }) => (
-            <p className="text-slate-700 dark:text-slate-300 my-2 leading-relaxed" {...props} />
+            <div className="text-slate-700 dark:text-slate-300 my-2 leading-relaxed" {...props} />
           ),
-          ul: ({ node, ...props }) => (
-            <ul className="list-disc list-inside space-y-1 my-2 pl-2 text-slate-700 dark:text-slate-300" {...props} />
-          ),
-          ol: ({ node, ...props }) => (
-            <ol className="list-decimal list-inside space-y-1 my-2 pl-2 text-slate-700 dark:text-slate-300" {...props} />
-          ),
-          li: ({ node, ...props }) => (
-            <li className="text-slate-700 dark:text-slate-300 my-0.5" {...props} />
-          ),
-          blockquote: ({ node, ...props }) => (
-            <blockquote className="border-l-4 border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 p-3 my-3 rounded-r-xl italic text-slate-700 dark:text-slate-300" {...props} />
+          pre: ({ node, children, ...props }: any) => (
+            <div className="my-3 rounded-2xl bg-slate-950 p-4 border border-slate-800 overflow-x-auto">
+              <pre className="m-0 p-0 text-xs font-mono text-slate-100 leading-relaxed bg-transparent border-0" {...props}>
+                {children}
+              </pre>
+            </div>
           ),
           code: ({ node, inline, className, children, ...props }: any) => {
-            if (inline) {
+            const isInline = inline || (!className && !String(children).includes("\n"));
+            if (isInline) {
               return (
                 <code className="px-1.5 py-0.5 text-xs font-mono bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-md border border-slate-200 dark:border-slate-700" {...props}>
                   {children}
@@ -51,11 +47,9 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
               );
             }
             return (
-              <div className="my-3 rounded-2xl bg-slate-950 p-4 border border-slate-800 overflow-x-auto">
-                <code className="text-xs font-mono text-slate-100 leading-relaxed block" {...props}>
-                  {children}
-                </code>
-              </div>
+              <code className="text-xs font-mono text-slate-100 leading-relaxed block" {...props}>
+                {children}
+              </code>
             );
           },
           table: ({ node, ...props }) => (

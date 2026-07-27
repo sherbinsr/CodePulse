@@ -6,9 +6,16 @@ from pydantic import BaseModel
 
 class OrgOut(BaseModel):
     login: str
-    avatar_url: Optional[str]
-    description: Optional[str]
+    avatar_url: Optional[str] = None
+    description: Optional[str] = None
     provider: str = "github"
+    is_custom: bool = False
+
+
+class CreateOrgReq(BaseModel):
+    login: str
+    provider: str = "github"
+    description: Optional[str] = None
 
 
 class SyncTriggerResponse(BaseModel):

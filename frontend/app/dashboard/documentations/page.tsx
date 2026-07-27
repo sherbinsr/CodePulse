@@ -252,7 +252,7 @@ export default function DocumentationsPage() {
   const totalRepos = repos.length;
   const documentedRepos = repos.filter((r) => r.has_documentation).length;
   const missingRepos = totalRepos - documentedRepos;
-  const totalS3Docs = repos.reduce((acc, r) => acc + r.documentations.length, 0);
+
 
   // Filtered & Sorted Repositories
   const filteredRepos = useMemo(() => {
@@ -314,7 +314,7 @@ export default function DocumentationsPage() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Repositories</span>
@@ -355,20 +355,8 @@ export default function DocumentationsPage() {
             <span className="text-xs text-slate-500">needs docs</span>
           </div>
         </div>
-
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Stored Docs</span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <BookOpen className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalS3Docs}</span>
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">total files</span>
-          </div>
-        </div>
       </div>
+
 
 
       {/* Control Bar: Search & Sort */}

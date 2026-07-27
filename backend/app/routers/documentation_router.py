@@ -1,3 +1,4 @@
+import base64
 import logging
 import mimetypes
 from typing import Optional
@@ -23,6 +24,13 @@ from app.services.s3_service import S3Service
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documentations", tags=["Documentations"])
 s3_service = S3Service()
+
+
+def _encode_s3_key(owner: str, repo: str, file_name: str) -> str:
+    """Encode file_name to base64 url-safe string for S3 key storage instead of plain text."""
+    encoded_name = base64.urlsafe_b64encode(file_name.encode("utf-8")).decode("utf-8").rstrip("=")
+    ext = ("." + file_name.rsplit(".", 1)[-1]) if "." in file_name else ""
+    return f"docs/{owner}/{repo}/{encoded_name}{ext}"
 
 
 @router.get("", response_model=list[RepositoryWithDocsOut])
@@ -128,7 +136,7 @@ async def create_repository_documentation(
 
     file_name = body.file_name or "README.md"
     file_type = body.file_type or ("markdown" if file_name.endswith(".md") else "doc")
-    s3_key = f"docs/{repo.owner}/{repo.name}/{file_name}"
+    s3_key = _encode_s3_key(repo.owner, repo.name, file_name)
 
     content_type = "text/markdown; charset=utf-8" if file_type == "markdown" else "text/plain; charset=utf-8"
     s3_res = s3_service.upload_file(key=s3_key, content=body.content, content_type=content_type)
@@ -161,7 +169,7 @@ async def create_repository_documentation(
 
     await db.commit()
     await db.refresh(doc)
-    logger.info("Saved doc %s for repo %s to S3 bucket %s", file_name, repo.full_name, doc.s3_bucket)
+    logger.info("Saved doc %s (S3 key: %s) for repo %s to S3 bucket %s", file_name, s3_key, repo.full_name, doc.s3_bucket)
     return doc
 
 
@@ -172,7 +180,7 @@ async def upload_repository_documentation_file(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Upload a markdown (.md) or document file (.doc, .docx, .txt, .pdf) to S3."""
+    """Upload a markdown (.md) or document file (.doc, .docx, .txt, .pdf) to S3 with encoded key name."""
     stmt = select(Repository).where(Repository.id == repo_id)
     res = await db.execute(stmt)
     repo = res.scalar_one_or_none()
@@ -191,7 +199,7 @@ async def upload_repository_documentation_file(
     else:
         file_type = "txt"
 
-    s3_key = f"docs/{repo.owner}/{repo.name}/{file_name}"
+    s3_key = _encode_s3_key(repo.owner, repo.name, file_name)
     content_type = file.content_type or "application/octet-stream"
 
     s3_res = s3_service.upload_file(key=s3_key, content=file_bytes, content_type=content_type)
@@ -229,7 +237,7 @@ async def upload_repository_documentation_file(
 
     await db.commit()
     await db.refresh(doc)
-    logger.info("Uploaded file %s for repo %s to S3 bucket %s", file_name, repo.full_name, doc.s3_bucket)
+    logger.info("Uploaded file %s (S3 key: %s) for repo %s to S3 bucket %s", file_name, s3_key, repo.full_name, doc.s3_bucket)
     return doc
 
 
@@ -257,7 +265,7 @@ async def update_documentation(
         s3_service.delete_file(doc.s3_key)
         doc.file_name = body.file_name
         doc.file_type = "markdown" if body.file_name.endswith(".md") else doc.file_type
-        doc.s3_key = f"docs/{repo.owner}/{repo.name}/{doc.file_name}"
+        doc.s3_key = _encode_s3_key(repo.owner, repo.name, body.file_name)
 
     if body.content is not None:
         doc.content = body.content
@@ -268,7 +276,7 @@ async def update_documentation(
 
     await db.commit()
     await db.refresh(doc)
-    logger.info("Updated documentation ID %d in S3 bucket %s", doc.id, doc.s3_bucket)
+    logger.info("Updated documentation ID %d (S3 key: %s) in S3 bucket %s", doc.id, doc.s3_key, doc.s3_bucket)
     return doc
 
 

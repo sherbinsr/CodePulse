@@ -3,8 +3,11 @@ import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
   ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
   CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
-  Documentation, RepositoryWithDocs,
+  Documentation, RepositoryWithDocs, ProjectV2, ProjectBoard, ProjectItem,
+  GitHubIssue, IssueTimelineDetails, RepoProject, ProjectTask, RepoProjectBoard,
 } from "@/types";
+
+
 
 
 const api = axios.create({
@@ -36,6 +39,16 @@ export const getMe = async (token: string): Promise<User> => {
 // Orgs
 export const listOrgs = async (): Promise<Org[]> => {
   const { data } = await api.get("/api/orgs");
+  return data;
+};
+
+export const addOrg = async (login: string, provider: "github" | "gitlab" = "github"): Promise<Org> => {
+  const { data } = await api.post("/api/orgs", { login, provider });
+  return data;
+};
+
+export const deleteCustomOrg = async (login: string, provider: "github" | "gitlab" = "github"): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/api/orgs/${login}?provider=${provider}`);
   return data;
 };
 
@@ -168,5 +181,177 @@ export const deleteDocumentation = async (docId: number): Promise<{ message: str
   return data;
 };
 
+// GitHub Projects v2 & Issues
+export const getProjects = async (
+  org: string,
+  provider: "github" | "gitlab" = "github"
+): Promise<ProjectV2[]> => {
+  const { data } = await api.get(`/api/projects?org=${org}&provider=${provider}`);
+  return data;
+};
+
+export const importProjectByNumber = async (
+  org: string,
+  projectNumber: number
+): Promise<ProjectV2> => {
+  const { data } = await api.post(`/api/projects/import-by-number?org=${org}&project_number=${projectNumber}`);
+  return data;
+};
+
+
+export const getProjectBoard = async (projectId: number): Promise<ProjectBoard> => {
+  const { data } = await api.get(`/api/projects/${projectId}/board`);
+  return data;
+};
+
+export const updateProjectItemStatus = async (
+  projectId: number,
+  itemId: number,
+  payload: { status: string; status_option_id?: string | null; field_id?: string | null }
+): Promise<{ message: string; old_status: string; new_status: string }> => {
+  const { data } = await api.post(`/api/projects/${projectId}/items/${itemId}/status`, payload);
+  return data;
+};
+
+export const createProjectIssue = async (
+  projectId: number,
+  payload: {
+    repo_name: string;
+    owner: string;
+    title: string;
+    body?: string;
+    assignees?: string[];
+    labels?: string[];
+    milestone?: number;
+    priority?: string;
+  }
+): Promise<ProjectItem> => {
+  const { data } = await api.post(`/api/projects/${projectId}/issues`, payload);
+  return data;
+};
+
+export const updateProjectIssue = async (
+  issueId: number,
+  payload: {
+    title?: string;
+    body?: string;
+    state?: string;
+    assignees?: string[];
+    labels?: string[];
+  }
+): Promise<GitHubIssue> => {
+  const { data } = await api.put(`/api/projects/issues/${issueId}`, payload);
+  return data;
+};
+
+export const getIssueTimelineDetails = async (
+  owner: string,
+  repo: string,
+  issueNumber: number
+): Promise<IssueTimelineDetails> => {
+
+  const { data } = await api.get(`/api/projects/issues/${owner}/${repo}/${issueNumber}/details`);
+  return data;
+};
+
+export const addIssueComment = async (
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  body: string
+): Promise<any> => {
+  const { data } = await api.post(`/api/projects/issues/${owner}/${repo}/${issueNumber}/comments`, { body });
+  return data;
+};
+
+export const bulkUpdateProjectIssues = async (payload: {
+  issue_ids: number[];
+  status?: string;
+  status_option_id?: string;
+  state?: string;
+  assignees?: string[];
+  labels?: string[];
+}): Promise<{ updated: number; message: string }> => {
+  const { data } = await api.post("/api/projects/bulk-update", payload);
+  return data;
+};
+
+// Built-in Repository Projects & Tasks API
+export const getRepoProjects = async (org: string, repoName: string): Promise<RepoProject[]> => {
+  const { data } = await api.get(`/api/projects/repos/${org}/${repoName}`);
+  return data;
+};
+
+export const createRepoProject = async (
+  org: string,
+  repoName: string,
+  payload: { name: string; description?: string; key_prefix?: string; columns?: Array<{ id: string; name: string }> }
+): Promise<RepoProject> => {
+  const { data } = await api.post(`/api/projects/repos/${org}/${repoName}`, {
+    repo_name: repoName,
+    ...payload,
+  });
+  return data;
+};
+
+
+export const updateRepoProject = async (
+  projectId: number,
+  payload: { name?: string; description?: string; key_prefix?: string; status?: string; columns?: Array<{ id: string; name: string }> }
+): Promise<RepoProject> => {
+  const { data } = await api.put(`/api/projects/repo-projects/${projectId}`, payload);
+  return data;
+};
+
+export const deleteRepoProject = async (projectId: number): Promise<{ message: string; id: number }> => {
+  const { data } = await api.delete(`/api/projects/repo-projects/${projectId}`);
+  return data;
+};
+
+export const getRepoProjectBoard = async (projectId: number): Promise<RepoProjectBoard> => {
+  const { data } = await api.get(`/api/projects/repo-projects/${projectId}/board`);
+  return data;
+};
+
+export const createProjectTask = async (
+  projectId: number,
+  payload: {
+    title: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    assignees?: string[];
+    labels?: string[];
+    story_points?: number;
+    sync_to_github?: boolean;
+  }
+): Promise<ProjectTask> => {
+  const { data } = await api.post(`/api/projects/repo-projects/${projectId}/tasks`, payload);
+  return data;
+};
+
+export const updateProjectTask = async (
+  taskId: number,
+  payload: {
+    title?: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    assignees?: string[];
+    labels?: string[];
+    story_points?: number;
+  }
+): Promise<ProjectTask> => {
+  const { data } = await api.put(`/api/projects/tasks/${taskId}`, payload);
+  return data;
+};
+
+export const deleteProjectTask = async (taskId: number): Promise<{ message: string; id: number }> => {
+  const { data } = await api.delete(`/api/projects/tasks/${taskId}`);
+  return data;
+};
+
 export default api;
+
+
 
