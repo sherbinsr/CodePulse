@@ -583,12 +583,12 @@ export default function DocumentationsPage() {
 
       {/* CREATE / EDIT DOCUMENTATION MODAL */}
       {activeModalRepo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6">
           <div
             className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
             onClick={() => setActiveModalRepo(null)}
           />
-          <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-[98vw] h-[96vh] max-h-[96vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
               <div>
@@ -762,7 +762,7 @@ export default function DocumentationsPage() {
                           </span>
                           <span className="text-[10px] text-slate-400 font-normal">Real-time</span>
                         </div>
-                        <div className="p-5 flex-1 overflow-y-auto max-h-[380px]">
+                        <div className="p-5 flex-1 overflow-y-auto min-h-0">
                           {docContent.trim() ? (
                             <MarkdownViewer content={docContent} />
                           ) : (
@@ -839,12 +839,12 @@ export default function DocumentationsPage() {
 
       {/* VIEW DOCUMENTATION MODAL */}
       {viewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6">
           <div
             className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
             onClick={() => setViewDoc(null)}
           />
-          <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-[98vw] h-[96vh] max-h-[96vh] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/50">
               <div className="flex items-center gap-3">
