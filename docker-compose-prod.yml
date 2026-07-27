@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codepulse}
       POSTGRES_DB: ${POSTGRES_DB:-codepulse}
     ports:
-      - "5430:5432"
+      - "5431:5432"
     volumes:
       - codepulse_postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
