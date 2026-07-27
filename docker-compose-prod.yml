@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codepulse}
       POSTGRES_DB: ${POSTGRES_DB:-codepulse}
     ports:
-      - "5432:5432"
+      - "5430:5432"
     volumes:
       - codepulse_postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -35,7 +35,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-codepulse}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-codepulse}:${POSTGRES_PASSWORD:-codepulse}@postgres:5432/${POSTGRES_DB:-codepulse}
     ports:
-      - "8000:8000"
+      - "8005:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
-      - "3000:3000"
+      - "3005:3000"
     depends_on:
       - backend
     networks:
