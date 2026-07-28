@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
-import { getRepoStats, getSyncStatus } from "@/lib/api";
+import { getRepoStats, getDocumentationRepos, getSyncStatus } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { formatHours, getApiError } from "@/lib/utils";
 import type { RepoStat, SyncStatus, User } from "@/types";
@@ -67,9 +67,34 @@ function RepositoriesContent() {
     setLoading(true);
     setError(null);
     try {
-      const [data, sync] = await Promise.all([getRepoStats(org), getSyncStatus(org, provider)]);
+      const [repoStats, docRepos, sync] = await Promise.all([
+        getRepoStats(org).catch(() => []),
+        getDocumentationRepos(org, provider).catch(() => []),
+        getSyncStatus(org, provider).catch(() => null),
+      ]);
       if (req !== reqRef.current) return;
-      setRepos(data);
+
+      const map = new Map<string, RepoStat>();
+      for (const r of repoStats) {
+        map.set(r.name.toLowerCase(), r);
+      }
+      for (const dr of docRepos) {
+        if (!map.has(dr.name.toLowerCase())) {
+          map.set(dr.name.toLowerCase(), {
+            repo: dr.full_name,
+            name: dr.name,
+            total_prs: 0,
+            merged_prs: 0,
+            open_prs: 0,
+            merge_rate: 0,
+            avg_merge_hours: null,
+            avg_review_hours: null,
+            contributors: 0,
+          });
+        }
+      }
+      const combined = Array.from(map.values()).sort((a, b) => b.total_prs - a.total_prs || a.name.localeCompare(b.name));
+      setRepos(combined);
       setSyncStatus(sync);
     } catch (e: unknown) {
       if (req !== reqRef.current) return;
@@ -77,7 +102,7 @@ function RepositoriesContent() {
     } finally {
       if (req === reqRef.current) setLoading(false);
     }
-  }, [org]);
+  }, [org, provider]);
 
   useEffect(() => { setUser(getUser()); }, []);
   useEffect(() => { load(); }, [load]);

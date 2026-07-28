@@ -54,7 +54,7 @@ async def repo_stats(
     db: AsyncSession = Depends(get_db),
 ):
     logger.info("GET repo stats for org=%s user=%s", org, current_user.login)
-    return await AnalyticsService(db).get_repo_stats(org)
+    return await AnalyticsService(db).get_repo_stats(org, user=current_user)
 
 
 @router.get("/{org}/trends", response_model=list[MonthlyTrendOut])

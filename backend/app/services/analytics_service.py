@@ -3,8 +3,11 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.pr_repository import PRRepository
+from app.repositories.repo_repository import RepoRepository
+from app.services.github_service import GitHubService
 from app.schemas.analytics import (
     BuildTrendOut,
     CISummaryOut,
@@ -41,8 +44,32 @@ class AnalyticsService:
         logger.info("Developer stats: %d developers found for org: %s", len(rows), org)
         return [DeveloperStatOut(**r) for r in rows]
 
-    async def get_repo_stats(self, org: str) -> list:
+    async def get_repo_stats(self, org: str, user: Optional[User] = None) -> list:
         logger.debug("Fetching repo stats for: %s", org)
+        if user and user.github_token:
+            try:
+                gh = GitHubService(user.github_token)
+                rest_repos = await gh.fetch_all_org_repos_rest(org)
+                repo_repo = RepoRepository(self.db)
+                for rr in rest_repos:
+                    full_name = rr.get("full_name")
+                    if full_name:
+                        owner, name = full_name.split("/", 1) if "/" in full_name else (org, rr.get("name"))
+                        lang = (rr.get("language") or "") if isinstance(rr.get("language"), str) else None
+                        await repo_repo.upsert(
+                            full_name=full_name,
+                            provider="github",
+                            name=rr.get("name", name),
+                            owner=owner,
+                            description=rr.get("description"),
+                            language=lang,
+                            stars=rr.get("stargazers_count", 0),
+                            forks=rr.get("forks_count", 0),
+                        )
+                await self.db.commit()
+            except Exception as e:
+                logger.warning("Failed to auto-discover repos in analytics for %s: %s", org, e)
+
         rows = await self.analytics_repo.get_repo_stats(org)
         logger.info("Repo stats: %d repos found for org: %s", len(rows), org)
         return [RepoStatOut(**r) for r in rows]

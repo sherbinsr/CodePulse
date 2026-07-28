@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import {
-  getRepoStats, getRepoProjects, createRepoProject,
+  getRepoStats, getDocumentationRepos, getRepoProjects, createRepoProject,
   updateRepoProject, deleteRepoProject, getRepoProjectBoard, createProjectTask,
   updateProjectTask, deleteProjectTask, getDeveloperStats, getIssueTimelineDetails, addIssueComment, triggerSync
 } from "@/lib/api";
@@ -127,14 +127,36 @@ export default function ProjectsPage() {
   // Load Org Repos & Developers
   useEffect(() => {
     if (!org) return;
-    getRepoStats(org)
-      .then((reposData) => {
-        setRepos(reposData);
-        if (reposData.length > 0 && !selectedRepoName) {
-          setSelectedRepoName(reposData[0].name);
+
+    Promise.all([
+      getRepoStats(org).catch(() => []),
+      getDocumentationRepos(org).catch(() => []),
+    ]).then(([repoStats, docRepos]) => {
+      const map = new Map<string, RepoStat>();
+      for (const r of repoStats) {
+        map.set(r.name, r);
+      }
+      for (const dr of docRepos) {
+        if (!map.has(dr.name)) {
+          map.set(dr.name, {
+            repo: dr.full_name,
+            name: dr.name,
+            total_prs: 0,
+            merged_prs: 0,
+            open_prs: 0,
+            merge_rate: 0,
+            avg_merge_hours: null,
+            avg_review_hours: null,
+            contributors: 0,
+          });
         }
-      })
-      .catch(() => {});
+      }
+      const combined = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+      setRepos(combined);
+      if (combined.length > 0 && !selectedRepoName) {
+        setSelectedRepoName(combined[0].name);
+      }
+    });
 
     getDeveloperStats(org)
       .then((devs) => setDevelopers(devs))

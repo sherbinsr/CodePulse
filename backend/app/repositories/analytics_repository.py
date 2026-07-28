@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import and_, case, func, select, text
+from sqlalchemy import and_, case, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.pull_request import PRReview, PullRequest
@@ -126,7 +126,16 @@ class AnalyticsRepository:
         return result
 
     async def get_repo_stats(self, org: str) -> list[dict]:
-        rows = await self.db.execute(
+        # Fetch all repositories registered for the organization
+        repos_res = await self.db.execute(
+            select(Repository)
+            .where(or_(Repository.owner.ilike(org), Repository.full_name.ilike(f"{org}/%")))
+            .order_by(Repository.name.asc())
+        )
+        repos = repos_res.scalars().all()
+
+        # Fetch PR aggregation stats grouped by repo_full_name
+        pr_rows_res = await self.db.execute(
             select(
                 PullRequest.repo_full_name,
                 func.count(PullRequest.id).label("total_prs"),
@@ -136,26 +145,36 @@ class AnalyticsRepository:
                 func.avg(PullRequest.time_to_first_review_hours).label("avg_review_hours"),
                 func.count(func.distinct(PullRequest.author_login)).label("contributors"),
             )
-            .where(PullRequest.org == org)
+            .where(PullRequest.org.ilike(org))
             .group_by(PullRequest.repo_full_name)
-            .order_by(func.count(PullRequest.id).desc())
         )
-        return [
-            {
-                "repo": r.repo_full_name,
-                "name": r.repo_full_name.split("/")[-1],
-                "total_prs": r.total_prs,
-                "merged_prs": int(r.merged or 0),
-                "open_prs": int(r.open or 0),
-                "merge_rate": round(int(r.merged or 0) / r.total_prs * 100, 1)
-                if r.total_prs
-                else 0.0,
-                "avg_merge_hours": round(r.avg_merge_hours, 1) if r.avg_merge_hours else None,
-                "avg_review_hours": round(r.avg_review_hours, 1) if r.avg_review_hours else None,
-                "contributors": r.contributors,
-            }
-            for r in rows
-        ]
+        pr_stats = {r.repo_full_name.lower(): r for r in pr_rows_res}
+
+        result = []
+        for repo in repos:
+            st = pr_stats.get(repo.full_name.lower())
+            total_prs = st.total_prs if st else 0
+            merged_prs = int(st.merged or 0) if st else 0
+            open_prs = int(st.open or 0) if st else 0
+            avg_merge_hours = round(st.avg_merge_hours, 1) if (st and st.avg_merge_hours) else None
+            avg_review_hours = round(st.avg_review_hours, 1) if (st and st.avg_review_hours) else None
+            contributors = st.contributors if st else 0
+
+            result.append(
+                {
+                    "repo": repo.full_name,
+                    "name": repo.name,
+                    "total_prs": total_prs,
+                    "merged_prs": merged_prs,
+                    "open_prs": open_prs,
+                    "merge_rate": round(merged_prs / total_prs * 100, 1) if total_prs > 0 else 0.0,
+                    "avg_merge_hours": avg_merge_hours,
+                    "avg_review_hours": avg_review_hours,
+                    "contributors": contributors,
+                }
+            )
+
+        return result
 
     async def get_monthly_trends(self, org: str, months: int = 6) -> list[dict]:
         since = datetime.utcnow() - timedelta(days=30 * months)
