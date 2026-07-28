@@ -772,13 +772,13 @@ export default function DocumentationsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex-1">
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Documentation File Name (.md or .doc)
+                        Document Type (.md or .doc)
                       </label>
                       <input
                         type="text"
                         value={docFileName}
                         onChange={(e) => setDocFileName(e.target.value)}
-                        placeholder="e.g. README.md, ARCHITECTURE.md, API.doc"
+                        placeholder="e.g. Architecture Document.md"
                         required
                         className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
@@ -897,14 +897,11 @@ export default function DocumentationsPage() {
                 <div className="flex-1 flex flex-col space-y-5 overflow-y-auto min-h-0 pr-1">
                   {/* Category Selection Section */}
                   <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between">
+                    <div>
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                         <Layers className="w-4 h-4 text-indigo-500" />
-                        Select Document Category
+                        Select Document Type
                       </label>
-                      <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
-                        Sets link title automatically
-                      </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -933,14 +930,14 @@ export default function DocumentationsPage() {
                   {/* Link Title Input */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Documentation Link Title
+                      Document Type
                     </label>
                     <input
                       type="text"
                       value={docFileName.replace(/\.link$/i, "")}
                       onChange={(e) => setDocFileName(e.target.value)}
                       required
-                      placeholder="e.g. Architecture Specs, Confluence API Wiki"
+                      placeholder="e.g. Architecture Document, Confluence API Wiki"
                       className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -971,14 +968,11 @@ export default function DocumentationsPage() {
                 <div className="flex-1 flex flex-col space-y-5 overflow-y-auto min-h-0 pr-1">
                   {/* Category Selection Section */}
                   <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between">
+                    <div>
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                         <Layers className="w-4 h-4 text-indigo-500" />
-                        Select Document Category
+                        Select Document Type
                       </label>
-                      <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
-                        Sets document name automatically
-                      </span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -1007,18 +1001,18 @@ export default function DocumentationsPage() {
                   {/* Document Name Preview & Input */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Document Name
+                      Document Type
                     </label>
                     <input
                       type="text"
                       value={docFileName}
                       onChange={(e) => setDocFileName(e.target.value)}
                       required
-                      placeholder="e.g. Project Overview.md"
+                      placeholder="e.g. Architecture Document.md"
                       className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <p className="text-[11px] text-slate-400">
-                      Target document filename generated from selected category name.
+                      Target document filename generated from selected document type.
                     </p>
                   </div>
 
