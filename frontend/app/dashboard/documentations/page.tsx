@@ -576,7 +576,7 @@ export default function DocumentationsPage() {
               key={repo.id}
               className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-sm hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all space-y-4"
             >
-              {/* Header Row: Repository Info */}
+              {/* Header Row: Repository Info (Left) & Add Documentation Button (Right when empty) */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2.5">
@@ -611,11 +611,24 @@ export default function DocumentationsPage() {
                     {repo.description || "No description provided."}
                   </p>
                 </div>
+
+                {/* Right side Add Documentation button when empty */}
+                {(!repo.has_documentation || repo.documentations.length === 0) && (
+                  <div className="shrink-0">
+                    <button
+                      onClick={() => handleOpenAddModal(repo)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Documentation
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Document Action Cards List */}
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
-                {repo.has_documentation && repo.documentations.length > 0 ? (
+              {/* Document Action Cards List (shown only when documents exist) */}
+              {repo.has_documentation && repo.documentations.length > 0 && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
                   <div className="flex flex-wrap items-center gap-3">
                     {repo.documentations.map((doc) => {
                       const isLinkDoc = doc.file_type === "link" || doc.file_name.endsWith(".link") || doc.content?.trim().startsWith("http");
@@ -679,19 +692,8 @@ export default function DocumentationsPage() {
                       Add Doc
                     </button>
                   </div>
-                ) : (
-                  /* No Doc yet -> Add Documentation Options */
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenAddModal(repo)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Documentation
-                    </button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
