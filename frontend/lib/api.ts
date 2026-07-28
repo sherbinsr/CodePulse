@@ -148,6 +148,13 @@ export const getDocumentationContent = async (docId: number): Promise<string> =>
   return data;
 };
 
+export const getDocumentationBlobUrl = async (docId: number): Promise<string> => {
+  const { data } = await api.get(`/api/documentations/${docId}/content`, {
+    responseType: "blob",
+  });
+  return URL.createObjectURL(data);
+};
+
 export const createDocumentation = async (
   repoId: number,
   payload: { file_name: string; file_type?: string; content: string }

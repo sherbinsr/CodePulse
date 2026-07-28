@@ -6,7 +6,7 @@ import {
   BookOpen, Search, Plus, Edit3, Trash2, Eye, Download, FileText, CheckCircle2,
   AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers, Check, Link2, ExternalLink, Globe
 } from "lucide-react";
-import { getDocumentationRepos, getDocumentationContent, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation } from "@/lib/api";
+import { getDocumentationRepos, getDocumentationContent, getDocumentationBlobUrl, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation } from "@/lib/api";
 import type { RepositoryWithDocs, Documentation } from "@/types";
 import { cn } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/documentation/markdown-viewer";
@@ -62,7 +62,7 @@ npm run dev
 ## Architecture & Features
 - **Frontend**: Next.js & React
 - **Backend**: FastAPI & PostgreSQL
-- **Storage**: AWS S3 Bucket
+- **Storage**: Cloud Storage
 `,
   },
   {
@@ -75,12 +75,12 @@ Detailed breakdown of system modules, dataflow pipelines, and integration points
 
 ## Components
 1. **API Router Layer**: Handles authentication, CORS, rate limits.
-2. **Business Services**: Processes repository analytics and S3 file operations.
-3. **Database & S3**: Persistent storage for metrics and technical specifications.
+2. **Business Services**: Processes repository analytics and document operations.
+3. **Database & Storage**: Persistent storage for metrics and technical specifications.
 
 ## Data Flow
 \`\`\`
-User Client ---> FastAPI backend ---> S3 Storage Bucket (Docs)
+User Client ---> FastAPI backend ---> Cloud Storage (Docs)
 \`\`\`
 `,
   },
@@ -94,7 +94,7 @@ User Client ---> FastAPI backend ---> S3 Storage Bucket (Docs)
 ### 1. List Repositories with Docs
 \`GET /api/documentations?org={org}\`
 
-### 2. Upload Documentation to S3
+### 2. Upload Documentation
 \`POST /api/documentations/repo/{repo_id}\`
 
 ### 3. Update Existing Doc
@@ -134,6 +134,7 @@ export default function DocumentationsPage() {
 
   // View modal state
   const [viewDoc, setViewDoc] = useState<{ doc: Documentation; content: string } | null>(null);
+  const [viewBlobUrl, setViewBlobUrl] = useState<string | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewModalTab, setViewModalTab] = useState<"preview" | "raw">("preview");
 
@@ -196,7 +197,7 @@ export default function DocumentationsPage() {
     setSelectedCategory("Architecture Document");
     setDocFileName("Architecture Document.md");
     setDocContent(
-      `# Architecture Document\n\n## Repository\n${repo.name}\n\n## Description\n${repo.description || "Project documentation stored in S3."}\n`
+      `# Architecture Document\n\n## Repository\n${repo.name}\n\n## Description\n${repo.description || "Project documentation."}\n`
     );
     setDocLinkUrl("");
     setSelectedFile(null);
@@ -225,7 +226,7 @@ export default function DocumentationsPage() {
           const fullContent = await getDocumentationContent(doc.id);
           setDocContent(fullContent);
         } catch {
-          setDocContent("# Failed to load file content from S3.");
+          setDocContent("# Failed to load file content.");
         }
       }
     }
@@ -297,7 +298,7 @@ export default function DocumentationsPage() {
       setActiveModalRepo(null);
       await fetchRepos();
     } catch (err: any) {
-      setFormError(err?.response?.data?.detail || err?.message || "Failed to save documentation to S3.");
+      setFormError(err?.response?.data?.detail || err?.message || "Failed to save documentation.");
     } finally {
       setSubmitting(false);
     }
@@ -314,11 +315,29 @@ export default function DocumentationsPage() {
     }
 
     setViewLoading(true);
+    setViewBlobUrl(null);
     try {
       const content = doc.content || (await getDocumentationContent(doc.id));
       setViewDoc({ doc, content });
+
+      const fname = doc.file_name.toLowerCase();
+      if (
+        doc.file_type === "pdf" ||
+        doc.file_type === "doc" ||
+        doc.file_type === "docx" ||
+        fname.endsWith(".pdf") ||
+        fname.endsWith(".doc") ||
+        fname.endsWith(".docx")
+      ) {
+        try {
+          const blobUrl = await getDocumentationBlobUrl(doc.id);
+          setViewBlobUrl(blobUrl);
+        } catch {
+          console.error("Could not fetch blob URL for binary document");
+        }
+      }
     } catch {
-      setViewDoc({ doc, content: "Error: Unable to fetch document from S3 bucket." });
+      setViewDoc({ doc, content: "Error: Unable to fetch document." });
     } finally {
       setViewLoading(false);
     }
@@ -555,75 +574,77 @@ export default function DocumentationsPage() {
           {filteredRepos.map((repo) => (
             <div
               key={repo.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-sm hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-sm hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all space-y-4"
             >
-              {/* Left Side: Repository Info */}
-              <div className="space-y-2 flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-                    <FileCode className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  </span>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white truncate flex items-center gap-2">
-                      {repo.name}
-                      <span className="text-xs font-normal text-slate-400">({repo.owner})</span>
-                    </h3>
+              {/* Header Row: Repository Info */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+                      <FileCode className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white truncate flex items-center gap-2">
+                        {repo.name}
+                        <span className="text-xs font-normal text-slate-400">({repo.owner})</span>
+                      </h3>
+                    </div>
+
+                    {repo.language && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                        {repo.language}
+                      </span>
+                    )}
+
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                      repo.has_documentation
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                    )}>
+                      {repo.has_documentation ? `${repo.documentations.length} Documented` : "Missing Docs"}
+                    </span>
                   </div>
 
-                  {repo.language && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                      <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                      {repo.language}
-                    </span>
-                  )}
-
-                  <span className={cn(
-                    "px-2.5 py-0.5 rounded-full text-xs font-semibold border",
-                    repo.has_documentation
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                  )}>
-                    {repo.has_documentation ? "Documented" : "Missing Docs"}
-                  </span>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                    {repo.description || "No description provided."}
+                  </p>
                 </div>
-
-                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                  {repo.description || "No description provided."}
-                </p>
               </div>
 
-                {/* Right Side: Options & Actions */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
-                  {repo.has_documentation && repo.documentations.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-3">
-                      {repo.documentations.map((doc) => {
-                        const isLinkDoc = doc.file_type === "link" || doc.file_name.endsWith(".link") || doc.content?.trim().startsWith("http");
-                        const cleanDocName = doc.file_name.replace(/\.link$/i, "");
-                        return (
-                          <div key={doc.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm">
-                            {/* Document Name */}
-                            <div className="flex items-center gap-2 pr-2.5 border-r border-slate-200 dark:border-slate-700">
-                              {isLinkDoc ? (
-                                <Link2 className="w-4 h-4 text-blue-500 shrink-0" />
-                              ) : (
-                                <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
-                              )}
-                              <span className="text-xs font-mono font-bold text-slate-900 dark:text-white max-w-[150px] truncate" title={cleanDocName}>
-                                {cleanDocName}
-                              </span>
-                            </div>
+              {/* Document Action Cards List */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                {repo.has_documentation && repo.documentations.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {repo.documentations.map((doc) => {
+                      const isLinkDoc = doc.file_type === "link" || doc.file_name.endsWith(".link") || doc.content?.trim().startsWith("http");
+                      const cleanDocName = doc.file_name.replace(/\.link$/i, "");
+                      return (
+                        <div key={doc.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm max-w-full">
+                          {/* Document Name */}
+                          <div className="flex items-center gap-2 pr-2.5 border-r border-slate-200 dark:border-slate-700 min-w-0">
+                            {isLinkDoc ? (
+                              <Link2 className="w-4 h-4 text-blue-500 shrink-0" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                            )}
+                            <span className="text-xs font-mono font-bold text-slate-900 dark:text-white max-w-[140px] truncate" title={cleanDocName}>
+                              {cleanDocName}
+                            </span>
+                          </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-1.5">
-                              {/* View Button */}
-                              <button
-                                onClick={() => handleViewDoc(doc)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 transition-colors"
-                                title={isLinkDoc ? `Open Link: ${cleanDocName}` : `View ${cleanDocName}`}
-                              >
-                                {isLinkDoc ? <ExternalLink className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                <span>{isLinkDoc ? "Open" : "View"}</span>
-                              </button>
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* View Button */}
+                            <button
+                              onClick={() => handleViewDoc(doc)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 transition-colors"
+                              title={isLinkDoc ? `Open Link: ${cleanDocName}` : `View ${cleanDocName}`}
+                            >
+                              {isLinkDoc ? <ExternalLink className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              <span>{isLinkDoc ? "Open" : "View"}</span>
+                            </button>
 
                             {/* Edit Button */}
                             <button
@@ -649,15 +670,15 @@ export default function DocumentationsPage() {
                       );
                     })}
 
-                      {/* Add Additional Doc Button */}
-                      <button
-                        onClick={() => handleOpenAddModal(repo)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-dashed border-indigo-400 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Add Doc
-                      </button>
-                    </div>
+                    {/* Add Additional Doc Button */}
+                    <button
+                      onClick={() => handleOpenAddModal(repo)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-dashed border-indigo-400 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Doc
+                    </button>
+                  </div>
                 ) : (
                   /* No Doc yet -> Add Documentation Options */
                   <div className="flex items-center gap-2">
@@ -1041,7 +1062,7 @@ export default function DocumentationsPage() {
                       <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-3.5 py-2 rounded-xl flex items-center gap-2 border border-emerald-500/20">
                         <Check className="w-4 h-4 shrink-0 text-emerald-500" />
                         <span>
-                          File: <strong>{selectedFile.name}</strong> ({Math.round(selectedFile.size / 1024)} KB) → Will save in S3 as <strong className="underline">{docFileName}</strong>
+                          File: <strong>{selectedFile.name}</strong> ({Math.round(selectedFile.size / 1024)} KB) → Will save as <strong className="underline">{docFileName}</strong>
                         </span>
                       </div>
                     )}
@@ -1104,44 +1125,52 @@ export default function DocumentationsPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* View Mode Toggle: Preview vs Raw */}
-                <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl mr-2">
-                  <button
-                    onClick={() => setViewModalTab("preview")}
-                    className={cn(
-                      "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5",
-                      viewModalTab === "preview"
-                        ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-                    )}
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Rendered Preview
-                  </button>
-                  <button
-                    onClick={() => setViewModalTab("raw")}
-                    className={cn(
-                      "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5",
-                      viewModalTab === "raw"
-                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-                    )}
-                  >
-                    <Code2 className="w-3.5 h-3.5" />
-                    Raw Source
-                  </button>
-                </div>
+                {/* View Mode Toggle: Preview vs Raw (Hidden for PDF and Word DOC files) */}
+                {!(
+                  viewDoc.doc.file_type === "pdf" ||
+                  viewDoc.doc.file_type === "doc" ||
+                  viewDoc.doc.file_type === "docx" ||
+                  viewDoc.doc.file_name.toLowerCase().endsWith(".pdf") ||
+                  viewDoc.doc.file_name.toLowerCase().endsWith(".doc") ||
+                  viewDoc.doc.file_name.toLowerCase().endsWith(".docx")
+                ) && (
+                  <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl mr-2">
+                    <button
+                      onClick={() => setViewModalTab("preview")}
+                      className={cn(
+                        "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                        viewModalTab === "preview"
+                          ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                      )}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Rendered Preview
+                    </button>
+                    <button
+                      onClick={() => setViewModalTab("raw")}
+                      className={cn(
+                        "px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                        viewModalTab === "raw"
+                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                      )}
+                    >
+                      <Code2 className="w-3.5 h-3.5" />
+                      Raw Source
+                    </button>
+                  </div>
+                )}
 
                 <button
                   onClick={() => {
-                    const blob = new Blob([viewDoc.content], { type: "text/plain" });
-                    const url = URL.createObjectURL(blob);
+                    const downloadUrl = viewBlobUrl || URL.createObjectURL(new Blob([viewDoc.content], { type: "text/plain" }));
                     const a = document.createElement("a");
-                    a.href = url;
+                    a.href = downloadUrl;
                     a.download = viewDoc.doc.file_name;
                     a.click();
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Download
@@ -1157,9 +1186,76 @@ export default function DocumentationsPage() {
 
             {/* Body: Rendered Preview or Raw Source */}
             {viewModalTab === "preview" ? (
-              <div className="p-8 flex-1 overflow-y-auto bg-white dark:bg-slate-950">
-                <MarkdownViewer content={viewDoc.content} />
-              </div>
+              (() => {
+                const fname = viewDoc.doc.file_name.toLowerCase();
+                const isPdf = viewDoc.doc.file_type === "pdf" || fname.endsWith(".pdf");
+                const isDoc = viewDoc.doc.file_type === "doc" || viewDoc.doc.file_type === "docx" || fname.endsWith(".doc") || fname.endsWith(".docx");
+
+                if (isPdf) {
+                  return (
+                    <div className="flex-1 flex flex-col p-4 bg-slate-900/40 min-h-0">
+                      {viewBlobUrl ? (
+                        <iframe
+                          src={viewBlobUrl}
+                          className="w-full h-full flex-1 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white"
+                          title={viewDoc.doc.file_name}
+                        />
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-slate-400 text-xs italic">
+                          Loading PDF Document Preview...
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                if (isDoc) {
+                  return (
+                    <div className="p-8 flex-1 flex flex-col items-center justify-center bg-white dark:bg-slate-950 text-center space-y-6">
+                      <div className="p-5 bg-blue-50 dark:bg-blue-950/60 rounded-3xl text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-inner">
+                        <FileText className="w-12 h-12" />
+                      </div>
+                      <div className="max-w-lg space-y-2">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                          {viewDoc.doc.file_name}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Word Document stored securely. You can download the file directly or open it in the online viewer.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-center gap-3">
+                        {viewBlobUrl && (
+                          <a
+                            href={viewBlobUrl}
+                            download={viewDoc.doc.file_name}
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all hover:scale-105"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Download Word Document</span>
+                          </a>
+                        )}
+                        {viewDoc.doc.s3_url && (
+                          <a
+                            href={`https://docs.google.com/gview?url=${encodeURIComponent(viewDoc.doc.s3_url)}&embedded=true`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all"
+                          >
+                            <ExternalLink className="w-4 h-4 text-indigo-500" />
+                            <span>Preview in Google Docs Viewer</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-8 flex-1 overflow-y-auto bg-white dark:bg-slate-950">
+                    <MarkdownViewer content={viewDoc.content} />
+                  </div>
+                );
+              })()
             ) : (
               <div className="p-6 flex-1 overflow-y-auto bg-slate-950 font-mono text-xs text-slate-200 space-y-4">
                 <pre className="whitespace-pre-wrap leading-relaxed">{viewDoc.content}</pre>
