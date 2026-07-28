@@ -276,81 +276,43 @@ export function Sidebar({ org, provider = "github", hasOrg, orgs = [], onOrgChan
               </div>
             </div>
 
-            <div className="flex items-center gap-3 my-2">
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">OR Add By Handle</span>
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-            </div>
-
-            <form onSubmit={handleAddOrganizationSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                  Organization or User Handle
-                </label>
-                <input
-                  type="text"
-                  value={newOrgInput}
-                  onChange={(e) => setNewOrgInput(e.target.value)}
-                  placeholder="e.g. facebook, vercel, acme-corp, Rajeesh-Thuneri"
-                  required
-                  className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Enter any GitHub organization, enterprise, or username to track its repositories and projects.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                  Provider
-                </label>
-                <select
-                  value={newOrgProvider}
-                  onChange={(e) => setNewOrgProvider(e.target.value as any)}
-                  className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
-                >
-                  <option value="github">GitHub</option>
-                  <option value="gitlab">GitLab</option>
-                </select>
-              </div>
-
-              {/* List of Custom Added Organizations */}
-              {orgs.filter((o) => o.is_custom).length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">
-                    Added Organizations ({orgs.filter((o) => o.is_custom).length})
-                  </span>
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                    {orgs.filter((o) => o.is_custom).map((c) => (
-                      <div key={c.login} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border text-xs">
-                        <div className="flex items-center gap-2">
-                          <img src={c.avatar_url || `https://github.com/${c.login}.png`} className="w-4 h-4 rounded-full" />
-                          <span className="font-bold text-slate-900 dark:text-white">{c.login}</span>
-                          <span className="text-[10px] text-slate-400">({c.provider})</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteOrg(c.login, c.provider)}
-                          className="text-rose-500 hover:text-rose-700 p-1"
-                          title="Remove custom organization"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+            {/* List of Custom Added Organizations */}
+            {orgs.filter((o) => o.is_custom).length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">
+                  Added Organizations ({orgs.filter((o) => o.is_custom).length})
+                </span>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                  {orgs.filter((o) => o.is_custom).map((c) => (
+                    <div key={c.login} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border text-xs">
+                      <div className="flex items-center gap-2">
+                        <img src={c.avatar_url || `https://github.com/${c.login}.png`} className="w-4 h-4 rounded-full" />
+                        <span className="font-bold text-slate-900 dark:text-white">{c.login}</span>
+                        <span className="text-[10px] text-slate-400">({c.provider})</span>
                       </div>
-                    ))}
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOrg(c.login, c.provider)}
+                        className="text-rose-500 hover:text-rose-700 p-1"
+                        title="Remove custom organization"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
-                <button type="button" onClick={() => setShowAddOrgModal(false)} className="px-4 py-2 text-xs font-semibold">
-                  Cancel
-                </button>
-                <button type="submit" disabled={addingOrg} className="px-5 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl">
-                  {addingOrg ? "Adding..." : "Add Organization"}
-                </button>
               </div>
-            </form>
+            )}
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAddOrgModal(false)}
+                className="px-5 py-2 text-xs font-bold bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl transition-all"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

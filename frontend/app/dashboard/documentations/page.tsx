@@ -4,12 +4,40 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   BookOpen, Search, Plus, Edit3, Trash2, Eye, Download, FileText, CheckCircle2,
-  AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers
+  AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers, Check, Link2, ExternalLink, Globe
 } from "lucide-react";
 import { getDocumentationRepos, getDocumentationContent, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation } from "@/lib/api";
 import type { RepositoryWithDocs, Documentation } from "@/types";
 import { cn } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/documentation/markdown-viewer";
+
+const DOC_CATEGORIES = [
+  "Architecture Document",
+  "Architecture Diagram",
+  "Database Design",
+  "API Documentation",
+  "Technical Specification",
+  "Developer Guide",
+  "User Guide",
+  "Installation & Setup",
+  "Deployment Guide",
+  "Infrastructure",
+  "Docker & Containers",
+  "CI/CD Pipeline",
+  "Authentication & Security",
+  "Testing Documentation",
+  "Monitoring & Logging",
+  "Configuration Guide",
+  "Integrations",
+  "Release Notes",
+  "Migration Guide",
+  "Performance & Scalability",
+  "Sprint / Planning Documents",
+  "BRD",
+  "PRD",
+  "Meeting Notes",
+  "FAQ",
+];
 
 
 // Templates for quick doc generation
@@ -93,11 +121,13 @@ export default function DocumentationsPage() {
   // Modal states
   const [activeModalRepo, setActiveModalRepo] = useState<RepositoryWithDocs | null>(null);
   const [editDocTarget, setEditDocTarget] = useState<Documentation | null>(null);
-  const [modalTab, setModalTab] = useState<"editor" | "upload">("editor");
+  const [modalTab, setModalTab] = useState<"upload" | "link" | "editor">("upload");
 
   // Form states
-  const [docFileName, setDocFileName] = useState("README.md");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Architecture Document");
+  const [docFileName, setDocFileName] = useState("Architecture Document.md");
   const [docContent, setDocContent] = useState("");
+  const [docLinkUrl, setDocLinkUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -109,7 +139,6 @@ export default function DocumentationsPage() {
 
   // Markdown Editor mode state
   const [editorViewMode, setEditorViewMode] = useState<"write" | "preview" | "split">("split");
-
 
   // Delete modal state
   const [deleteDocTarget, setDeleteDocTarget] = useState<Documentation | null>(null);
@@ -139,17 +168,40 @@ export default function DocumentationsPage() {
     await fetchRepos();
   };
 
+  const handleCategorySelect = (cat: string) => {
+    setSelectedCategory(cat);
+    if (modalTab === "link") {
+      setDocFileName(`${cat}`);
+    } else if (selectedFile) {
+      const ext = selectedFile.name.includes(".") ? "." + selectedFile.name.split(".").pop() : ".md";
+      setDocFileName(`${cat}${ext}`);
+    } else {
+      setDocFileName(`${cat}.md`);
+    }
+    setDocContent(`# ${cat}\n\nDocumentation section for ${cat}.\n`);
+  };
+
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
+    if (file) {
+      const ext = file.name.includes(".") ? "." + file.name.split(".").pop() : ".md";
+      setDocFileName(`${selectedCategory || "Document"}${ext}`);
+    }
+  };
+
   // Open modal for creating new doc
   const handleOpenAddModal = (repo: RepositoryWithDocs) => {
     setActiveModalRepo(repo);
     setEditDocTarget(null);
-    setDocFileName(`${repo.name.toUpperCase()}-README.md`);
+    setSelectedCategory("Architecture Document");
+    setDocFileName("Architecture Document.md");
     setDocContent(
-      `# ${repo.name} Documentation\n\n## Description\n${repo.description || "Project documentation stored in S3."}\n\n## Getting Started\nInsert setup and technical guidelines here.\n`
+      `# Architecture Document\n\n## Repository\n${repo.name}\n\n## Description\n${repo.description || "Project documentation stored in S3."}\n`
     );
+    setDocLinkUrl("");
     setSelectedFile(null);
     setFormError(null);
-    setModalTab("editor");
+    setModalTab("upload"); // Set default tab to upload docs section
   };
 
   // Open modal for editing existing doc
@@ -158,23 +210,28 @@ export default function DocumentationsPage() {
     setEditDocTarget(doc);
     setDocFileName(doc.file_name);
     setFormError(null);
-    setModalTab("editor");
     setSelectedFile(null);
 
-    // Fetch full content if missing
-    if (doc.content) {
-      setDocContent(doc.content);
+    if (doc.file_type === "link" || doc.file_name.endsWith(".link")) {
+      setModalTab("link");
+      setDocLinkUrl(doc.content || "");
     } else {
-      try {
-        const fullContent = await getDocumentationContent(doc.id);
-        setDocContent(fullContent);
-      } catch {
-        setDocContent("# Failed to load file content from S3.");
+      setModalTab("editor");
+      // Fetch full content if missing
+      if (doc.content) {
+        setDocContent(doc.content);
+      } else {
+        try {
+          const fullContent = await getDocumentationContent(doc.id);
+          setDocContent(fullContent);
+        } catch {
+          setDocContent("# Failed to load file content from S3.");
+        }
       }
     }
   };
 
-  // Handle Save Doc (Editor or Upload)
+  // Handle Save Doc (Editor, Link, or Upload)
   const handleSaveDoc = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeModalRepo) return;
@@ -203,12 +260,38 @@ export default function DocumentationsPage() {
             content: docContent,
           });
         }
+      } else if (modalTab === "link") {
+        // Link Mode
+        if (!docLinkUrl.trim()) {
+          throw new Error("Documentation URL link is required");
+        }
+        let formattedUrl = docLinkUrl.trim();
+        if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+          formattedUrl = "https://" + formattedUrl;
+        }
+
+        const linkTitle = docFileName.trim() || `${selectedCategory || "External Link"}`;
+        const finalFileName = linkTitle.toLowerCase().endsWith(".link") ? linkTitle : `${linkTitle}.link`;
+
+        if (editDocTarget) {
+          await updateDocumentation(editDocTarget.id, {
+            file_name: finalFileName,
+            content: formattedUrl,
+          });
+        } else {
+          await createDocumentation(activeModalRepo.id, {
+            file_name: finalFileName,
+            file_type: "link",
+            content: formattedUrl,
+          });
+        }
       } else {
         // Upload file mode
         if (!selectedFile) {
           throw new Error("Please choose a file to upload");
         }
-        await uploadDocumentationFile(activeModalRepo.id, selectedFile);
+        const finalFileName = docFileName.trim() || `${selectedCategory || "Document"}.md`;
+        await uploadDocumentationFile(activeModalRepo.id, selectedFile, finalFileName);
       }
 
       setActiveModalRepo(null);
@@ -222,6 +305,14 @@ export default function DocumentationsPage() {
 
   // Handle View Doc
   const handleViewDoc = async (doc: Documentation) => {
+    if (doc.file_type === "link" || doc.file_name.endsWith(".link") || doc.content?.trim().startsWith("http")) {
+      const url = doc.content?.trim();
+      if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+        window.open(url, "_blank");
+        return;
+      }
+    }
+
     setViewLoading(true);
     try {
       const content = doc.content || (await getDocumentationContent(doc.id));
@@ -499,70 +590,74 @@ export default function DocumentationsPage() {
                 <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
                   {repo.description || "No description provided."}
                 </p>
-
-                {/* Docs Pill List */}
-                {repo.documentations.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="text-xs font-medium text-slate-400">Docs:</span>
-                    {repo.documentations.map((doc) => (
-                      <span
-                        key={doc.id}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
-                      >
-                        <FileText className="w-3 h-3 text-indigo-500" />
-                        {doc.file_name}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              {/* Right Side: Options & Actions */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
-                {repo.has_documentation && repo.documentations.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {repo.documentations.map((doc) => (
-                      <div key={doc.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                        {/* View Button */}
-                        <button
-                          onClick={() => handleViewDoc(doc)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors"
-                          title="View Documentation"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          View
-                        </button>
+                {/* Right Side: Options & Actions */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
+                  {repo.has_documentation && repo.documentations.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      {repo.documentations.map((doc) => {
+                        const isLinkDoc = doc.file_type === "link" || doc.file_name.endsWith(".link") || doc.content?.trim().startsWith("http");
+                        const cleanDocName = doc.file_name.replace(/\.link$/i, "");
+                        return (
+                          <div key={doc.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm">
+                            {/* Document Name */}
+                            <div className="flex items-center gap-2 pr-2.5 border-r border-slate-200 dark:border-slate-700">
+                              {isLinkDoc ? (
+                                <Link2 className="w-4 h-4 text-blue-500 shrink-0" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                              )}
+                              <span className="text-xs font-mono font-bold text-slate-900 dark:text-white max-w-[150px] truncate" title={cleanDocName}>
+                                {cleanDocName}
+                              </span>
+                            </div>
 
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => handleOpenEditModal(repo, doc)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-200/70 dark:bg-slate-700/70 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-                          title="Edit Documentation"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Edit
-                        </button>
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1.5">
+                              {/* View Button */}
+                              <button
+                                onClick={() => handleViewDoc(doc)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 transition-colors"
+                                title={isLinkDoc ? `Open Link: ${cleanDocName}` : `View ${cleanDocName}`}
+                              >
+                                {isLinkDoc ? <ExternalLink className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                <span>{isLinkDoc ? "Open" : "View"}</span>
+                              </button>
 
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => setDeleteDocTarget(doc)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
-                          title="Delete Documentation"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => handleOpenEditModal(repo, doc)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-200/70 dark:bg-slate-700/70 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                              title={`Edit ${doc.file_name}`}
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
 
-                    {/* Add Additional Doc Button */}
-                    <button
-                      onClick={() => handleOpenAddModal(repo)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-dashed border-indigo-400 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add Doc
-                    </button>
-                  </div>
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => setDeleteDocTarget(doc)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors"
+                              title={`Delete ${doc.file_name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                      {/* Add Additional Doc Button */}
+                      <button
+                        onClick={() => handleOpenAddModal(repo)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-dashed border-indigo-400 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Doc
+                      </button>
+                    </div>
                 ) : (
                   /* No Doc yet -> Add Documentation Options */
                   <div className="flex items-center gap-2">
@@ -588,7 +683,7 @@ export default function DocumentationsPage() {
             className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
             onClick={() => setActiveModalRepo(null)}
           />
-          <div className="relative bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-[98vw] h-[96vh] max-h-[96vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
               <div>
@@ -610,34 +705,56 @@ export default function DocumentationsPage() {
 
             {/* Modal Body */}
             <form onSubmit={handleSaveDoc} className="flex-1 flex flex-col overflow-hidden p-6 space-y-5">
-              {/* Tab Selector: Editor vs Upload */}
+              {/* Tab Selector: Upload vs Attach Link vs Editor */}
               {!editDocTarget && (
-                <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalTab("upload");
+                      if (!selectedCategory) setSelectedCategory("Architecture Document");
+                    }}
+                    className={cn(
+                      "flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all",
+                      modalTab === "upload"
+                        ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    )}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload File</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalTab("link");
+                      if (!selectedCategory) setSelectedCategory("Architecture Document");
+                      setDocFileName(`${selectedCategory || "Architecture Document"}`);
+                    }}
+                    className={cn(
+                      "flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all",
+                      modalTab === "link"
+                        ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    )}
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    <span>Attach Link</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setModalTab("editor")}
                     className={cn(
-                      "flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all",
+                      "flex-1 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all",
                       modalTab === "editor"
-                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                        : "text-slate-600 dark:text-slate-400"
+                        ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                     )}
                   >
-                    <Code2 className="w-4 h-4" />
-                    Write Markdown Editor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalTab("upload")}
-                    className={cn(
-                      "flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all",
-                      modalTab === "upload"
-                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                        : "text-slate-600 dark:text-slate-400"
-                    )}
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload File (.md, .doc, .docx)
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>Write Markdown</span>
                   </button>
                 </div>
               )}
@@ -775,33 +892,166 @@ export default function DocumentationsPage() {
                     )}
                   </div>
                 </div>
+              ) : modalTab === "link" ? (
+                /* Attach Link Tab */
+                <div className="flex-1 flex flex-col space-y-5 overflow-y-auto min-h-0 pr-1">
+                  {/* Category Selection Section */}
+                  <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-indigo-500" />
+                        Select Document Category
+                      </label>
+                      <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                        Sets link title automatically
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {DOC_CATEGORIES.map((cat) => {
+                        const isSelected = selectedCategory === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => handleCategorySelect(cat)}
+                            className={cn(
+                              "px-3 py-2 text-xs font-semibold rounded-xl border text-left transition-all truncate flex items-center justify-between",
+                              isSelected
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600"
+                            )}
+                          >
+                            <span className="truncate">{cat}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 shrink-0 ml-1" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Link Title Input */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Documentation Link Title
+                    </label>
+                    <input
+                      type="text"
+                      value={docFileName.replace(/\.link$/i, "")}
+                      onChange={(e) => setDocFileName(e.target.value)}
+                      required
+                      placeholder="e.g. Architecture Specs, Confluence API Wiki"
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {/* Link URL Input */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Documentation URL / Link
+                    </label>
+                    <div className="relative">
+                      <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <input
+                        type="url"
+                        value={docLinkUrl}
+                        onChange={(e) => setDocLinkUrl(e.target.value)}
+                        required
+                        placeholder="https://notion.so/..., https://confluence.com/..., https://github.com/..."
+                        className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-indigo-600 dark:text-indigo-400 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Attach any external link (Notion, Confluence, Google Docs, GitHub Wiki, Figma, etc.).
+                    </p>
+                  </div>
+                </div>
               ) : (
                 /* Upload File Tab */
-                <div className="py-8 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 p-8 text-center space-y-4">
-                  <div className="p-4 bg-indigo-50 dark:bg-indigo-950/60 rounded-full text-indigo-600 dark:text-indigo-400">
-                    <Upload className="w-8 h-8" />
+                <div className="flex-1 flex flex-col space-y-5 overflow-y-auto min-h-0 pr-1">
+                  {/* Category Selection Section */}
+                  <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-indigo-500" />
+                        Select Document Category
+                      </label>
+                      <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                        Sets document name automatically
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {DOC_CATEGORIES.map((cat) => {
+                        const isSelected = selectedCategory === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => handleCategorySelect(cat)}
+                            className={cn(
+                              "px-3 py-2 text-xs font-semibold rounded-xl border text-left transition-all truncate flex items-center justify-between",
+                              isSelected
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600"
+                            )}
+                          >
+                            <span className="truncate">{cat}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 shrink-0 ml-1" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
-                      Choose Markdown or Document File
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Supports <code className="text-indigo-600 font-mono">.md</code>, <code className="text-indigo-600 font-mono">.doc</code>, <code className="text-indigo-600 font-mono">.docx</code>, <code className="text-indigo-600 font-mono">.pdf</code>, <code className="text-indigo-600 font-mono">.txt</code>
+
+                  {/* Document Name Preview & Input */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Document Name
+                    </label>
+                    <input
+                      type="text"
+                      value={docFileName}
+                      onChange={(e) => setDocFileName(e.target.value)}
+                      required
+                      placeholder="e.g. Project Overview.md"
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[11px] text-slate-400">
+                      Target document filename generated from selected category name.
                     </p>
                   </div>
 
-                  <input
-                    type="file"
-                    accept=".md,.doc,.docx,.pdf,.txt"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="block text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
-                  />
-
-                  {selectedFile && (
-                    <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-lg">
-                      Selected: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                  {/* Upload Drop Zone */}
+                  <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 p-6 text-center space-y-3">
+                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/60 rounded-full text-indigo-600 dark:text-indigo-400">
+                      <Upload className="w-6 h-6" />
                     </div>
-                  )}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-0.5">
+                        Choose Document File to Upload
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Supports <code className="text-indigo-600 font-mono">.md</code>, <code className="text-indigo-600 font-mono">.doc</code>, <code className="text-indigo-600 font-mono">.docx</code>, <code className="text-indigo-600 font-mono">.pdf</code>, <code className="text-indigo-600 font-mono">.txt</code>
+                      </p>
+                    </div>
+
+                    <input
+                      type="file"
+                      accept=".md,.doc,.docx,.pdf,.txt"
+                      onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                      className="block text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+                    />
+
+                    {selectedFile && (
+                      <div className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/50 px-3.5 py-2 rounded-xl flex items-center gap-2 border border-emerald-500/20">
+                        <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                        <span>
+                          File: <strong>{selectedFile.name}</strong> ({Math.round(selectedFile.size / 1024)} KB) → Will save in S3 as <strong className="underline">{docFileName}</strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

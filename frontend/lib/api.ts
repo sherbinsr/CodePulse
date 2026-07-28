@@ -158,10 +158,11 @@ export const createDocumentation = async (
 
 export const uploadDocumentationFile = async (
   repoId: number,
-  file: File
+  file: File,
+  customFileName?: string
 ): Promise<Documentation> => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file, customFileName || file.name);
   const { data } = await api.post(`/api/documentations/repo/${repoId}/upload`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
