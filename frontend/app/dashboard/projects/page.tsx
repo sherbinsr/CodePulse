@@ -717,22 +717,22 @@ export default function ProjectsPage() {
                           setIsEditingTask(false);
                         }}
                         className={cn(
-                          "bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md group relative space-y-2.5",
+                          "bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md group relative space-y-2.5 overflow-hidden w-full",
                           isDraggingThis
                             ? "opacity-50 border-dashed border-indigo-500 scale-95"
                             : "border-slate-200/80 dark:border-slate-800/80 hover:border-indigo-400 dark:hover:border-indigo-600"
                         )}
                       >
                         {/* Card Header: Ticket Key, Priority & Story Points */}
-                        <div className="flex items-center justify-between text-[11px] gap-2">
-                          <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center justify-between text-[11px] gap-1.5 w-full">
+                          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                             {task.ticket_key && (
-                              <span className="font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 tracking-wider">
+                              <span className="font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 tracking-wider shrink-0">
                                 {task.ticket_key}
                               </span>
                             )}
                             <span className={cn(
-                              "px-2 py-0.5 rounded-md font-extrabold text-[10px] uppercase",
+                              "px-2 py-0.5 rounded-md font-extrabold text-[10px] uppercase shrink-0",
                               task.priority === "High" || task.priority === "Critical"
                                 ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
                                 : task.priority === "Medium"
@@ -743,21 +743,21 @@ export default function ProjectsPage() {
                             </span>
                           </div>
 
-                          <span className="font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md shrink-0">
+                          <span className="font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[10px] shrink-0">
                             {task.story_points} pts
                           </span>
                         </div>
 
                         {/* Task Title */}
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-relaxed">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-relaxed break-words">
                           {task.title}
                         </h4>
 
                         {/* Labels */}
                         {task.labels.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1 w-full">
                             {task.labels.map((l) => (
-                              <span key={l.name} className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                              <span key={l.name} className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 break-all">
                                 {l.name}
                               </span>
                             ))}
@@ -765,11 +765,11 @@ export default function ProjectsPage() {
                         )}
 
                         {/* Footer with Linked Issue & PR Badge */}
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400">
-                          <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 w-full">
+                          <div className="flex items-center gap-1 min-w-0 max-w-[60%]">
                             {task.assignees.length > 0 ? (
                               task.assignees.map((a) => (
-                                <span key={a.login} className="font-semibold text-slate-700 dark:text-slate-300">
+                                <span key={a.login} className="font-semibold text-slate-700 dark:text-slate-300 truncate text-[11px]" title={`@${a.login}`}>
                                   @{a.login}
                                 </span>
                               ))
@@ -779,11 +779,11 @@ export default function ProjectsPage() {
                           </div>
 
                           {task.issue && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-mono font-bold text-indigo-500 flex items-center gap-1">
+                            <div className="flex items-center gap-1 shrink-0 ml-auto">
+                              <span className="text-[10px] font-mono font-bold text-indigo-500">
                                 #{task.issue.number}
                               </span>
-                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-0.5">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-0.5">
                                 <GitPullRequest className="w-2.5 h-2.5" />
                                 PR
                               </span>
