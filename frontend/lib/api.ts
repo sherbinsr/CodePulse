@@ -3,7 +3,7 @@ import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
   ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
   CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
-  Documentation, RepositoryWithDocs, ProjectV2, ProjectBoard, ProjectItem,
+  Documentation, RepositoryWithDocs, GitHubRelease, ProjectV2, ProjectBoard, ProjectItem,
   GitHubIssue, IssueTimelineDetails, RepoProject, ProjectTask, RepoProjectBoard,
 } from "@/types";
 
@@ -28,6 +28,11 @@ export const githubCallback = async (code: string): Promise<{ access_token: stri
 
 export const gitlabCallback = async (code: string): Promise<{ access_token: string; user: User }> => {
   const { data } = await api.post("/api/auth/gitlab/callback", { code });
+  return data;
+};
+
+export const googleCallback = async (code: string): Promise<{ access_token: string; user: User }> => {
+  const { data } = await api.post("/api/auth/google/callback", { code });
   return data;
 };
 
@@ -96,7 +101,17 @@ export const getReviewNetwork = async (org: string): Promise<ReviewNetwork[]> =>
 
 export const getPRList = async (
   org: string,
-  params?: { repo?: string; author?: string; state?: string; limit?: number; offset?: number }
+  params?: {
+    repo?: string;
+    author?: string;
+    state?: string;
+    action_status?: string;
+    base_branch?: string;
+    head_branch?: string;
+    sort_by?: string;
+    limit?: number;
+    offset?: number;
+  }
 ): Promise<{ data: PullRequest[]; total: number }> => {
   const { data } = await api.get(`/api/analytics/${org}/prs`, { params });
   return data;
@@ -138,6 +153,11 @@ export const getDocumentationRepos = async (
   provider: "github" | "gitlab" = "github"
 ): Promise<RepositoryWithDocs[]> => {
   const { data } = await api.get(`/api/documentations?org=${org}&provider=${provider}`);
+  return data;
+};
+
+export const getRepoReleases = async (owner: string, repo: string): Promise<GitHubRelease[]> => {
+  const { data } = await api.get(`/api/documentations/releases/${owner}/${repo}`);
   return data;
 };
 

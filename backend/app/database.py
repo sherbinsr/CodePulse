@@ -42,3 +42,22 @@ async def init_db():
             except Exception:
                 pass
 
+        # Auto-migrate pull_requests table columns
+        pr_cols = [
+            ("body", "TEXT"),
+            ("head_branch", "VARCHAR(255)"),
+            ("base_branch", "VARCHAR(255)"),
+            ("action_file", "VARCHAR(255)"),
+            ("action_status", "VARCHAR(50)"),
+            ("action_name", "VARCHAR(255)"),
+            ("action_file_content", "TEXT"),
+        ]
+        for col, col_type in pr_cols:
+            try:
+                await conn.execute(text(f"ALTER TABLE pull_requests ADD COLUMN IF NOT EXISTS {col} {col_type}"))
+            except Exception:
+                try:
+                    await conn.execute(text(f"ALTER TABLE pull_requests ADD COLUMN {col} {col_type}"))
+                except Exception:
+                    pass
+

@@ -44,6 +44,9 @@ query PRAnalytics($org: String!, $repoCursor: String) {
             number
             databaseId
             title
+            body
+            headRefName
+            baseRefName
             state
             additions
             deletions
@@ -102,6 +105,9 @@ query PRUserAnalytics($org: String!, $repoCursor: String) {
             number
             databaseId
             title
+            body
+            headRefName
+            baseRefName
             state
             additions
             deletions
@@ -750,6 +756,22 @@ class GitHubService:
             return await self._rest_get_paginated(f"/repos/{owner}/{repo}/issues", {"state": state, "per_page": 100})
         except Exception as e:
             logger.warning("Failed to fetch repo issues for %s/%s: %s", owner, repo, e)
+            return []
+
+    async def get_repo_releases(self, owner: str, repo: str) -> list[dict]:
+        """Fetch releases and release notes for a repository from GitHub REST API."""
+        try:
+            return await self._rest_get_paginated(f"/repos/{owner}/{repo}/releases")
+        except Exception as e:
+            logger.warning("Failed to fetch repo releases for %s/%s: %s", owner, repo, e)
+            return []
+
+    async def get_repo_tags(self, owner: str, repo: str) -> list[dict]:
+        """Fetch git tags for a repository from GitHub REST API."""
+        try:
+            return await self._rest_get_paginated(f"/repos/{owner}/{repo}/tags")
+        except Exception as e:
+            logger.warning("Failed to fetch repo tags for %s/%s: %s", owner, repo, e)
             return []
 
     @staticmethod

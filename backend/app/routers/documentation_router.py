@@ -16,9 +16,11 @@ from app.routers.deps import get_current_user
 from app.schemas.documentation import (
     CreateDocumentationReq,
     DocumentationOut,
+    ReleaseOut,
     RepositoryWithDocsOut,
     UpdateDocumentationReq,
 )
+from app.services.github_service import GitHubService
 from app.services.s3_service import S3Service
 
 logger = logging.getLogger(__name__)
@@ -298,3 +300,76 @@ async def delete_documentation(
     await db.commit()
     logger.info("Deleted documentation ID %d (key: %s) from S3", doc_id, doc.s3_key)
     return {"message": "Documentation deleted successfully", "id": doc_id}
+
+
+@router.get("/releases/{owner}/{repo}", response_model=list[ReleaseOut])
+async def get_repo_releases(
+    owner: str,
+    repo: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch GitHub release notes and tags directly from GitHub REST API for a given repository."""
+    token = current_user.github_token if current_user.github_token else ""
+    gh_service = GitHubService(token)
+
+    releases_raw = []
+    try:
+        releases_raw = await gh_service.get_repo_releases(owner, repo)
+    except Exception as e:
+        logger.warning("Failed to fetch GitHub releases for %s/%s: %s", owner, repo, e)
+
+    output = []
+    if releases_raw:
+        for r in releases_raw:
+            author = r.get("author") or {}
+            output.append(
+                ReleaseOut(
+                    id=r.get("id", 0),
+                    tag_name=r.get("tag_name", "v1.0.0"),
+                    name=r.get("name") or r.get("tag_name", "Release Notes"),
+                    body=r.get("body") or f"Release notes for tag {r.get('tag_name')}.",
+                    draft=r.get("draft", False),
+                    prerelease=r.get("prerelease", False),
+                    created_at=str(r.get("created_at") or ""),
+                    published_at=str(r.get("published_at") or r.get("created_at") or ""),
+                    html_url=r.get("html_url", f"https://github.com/{owner}/{repo}/releases/tag/{r.get('tag_name')}"),
+                    author_login=author.get("login", owner),
+                    author_avatar=author.get("avatar_url"),
+                )
+            )
+
+    # If no formal GitHub Releases found, fetch Git Tags directly from GitHub REST API
+    if not output:
+        try:
+            tags_raw = await gh_service.get_repo_tags(owner, repo)
+            if tags_raw:
+                for idx, t in enumerate(tags_raw):
+                    tag_name = t.get("name", "v1.0.0")
+                    commit = t.get("commit") or {}
+                    sha = (commit.get("sha") or "")[:7]
+                    output.append(
+                        ReleaseOut(
+                            id=idx + 1,
+                            tag_name=tag_name,
+                            name=f"Release {tag_name}",
+                            body=(
+                                f"## 🏷️ Git Tag: `{tag_name}`\n\n"
+                                f"- **Repository**: `{owner}/{repo}`\n"
+                                f"- **Commit SHA**: `{sha}`\n"
+                                f"- **Tag Link**: [View Tag on GitHub](https://github.com/{owner}/{repo}/releases/tag/{tag_name})\n"
+                            ),
+                            draft=False,
+                            prerelease=False,
+                            created_at="",
+                            published_at="",
+                            html_url=f"https://github.com/{owner}/{repo}/releases/tag/{tag_name}",
+                            author_login=owner,
+                            author_avatar=f"https://github.com/{owner}.png",
+                        )
+                    )
+        except Exception as e:
+            logger.warning("Failed to fetch GitHub tags for %s/%s: %s", owner, repo, e)
+
+    return output
+

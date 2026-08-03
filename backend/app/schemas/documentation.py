@@ -46,3 +46,18 @@ class CreateDocumentationReq(BaseModel):
 class UpdateDocumentationReq(BaseModel):
     file_name: Optional[str] = None
     content: Optional[str] = None
+
+
+class ReleaseOut(BaseModel):
+    id: int
+    tag_name: str
+    name: Optional[str] = None
+    body: Optional[str] = None
+    draft: bool = False
+    prerelease: bool = False
+    created_at: Optional[str] = None
+    published_at: Optional[str] = None
+    html_url: str
+    author_login: Optional[str] = None
+    author_avatar: Optional[str] = None
+

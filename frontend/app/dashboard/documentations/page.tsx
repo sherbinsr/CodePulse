@@ -4,11 +4,11 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   BookOpen, Search, Plus, Edit3, Trash2, Eye, Download, FileText, CheckCircle2,
-  AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers, Check, Link2, ExternalLink, Globe
+  AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers, Check, Link2, ExternalLink, Globe, Tag, Calendar, User as UserIcon
 } from "lucide-react";
-import { getDocumentationRepos, getDocumentationContent, getDocumentationBlobUrl, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation } from "@/lib/api";
-import type { RepositoryWithDocs, Documentation } from "@/types";
-import { cn } from "@/lib/utils";
+import { getDocumentationRepos, getDocumentationContent, getDocumentationBlobUrl, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation, getRepoReleases } from "@/lib/api";
+import type { RepositoryWithDocs, Documentation, GitHubRelease } from "@/types";
+import { cn, relativeTime } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/documentation/markdown-viewer";
 
 const DOC_CATEGORIES = [
@@ -144,6 +144,59 @@ export default function DocumentationsPage() {
   // Delete modal state
   const [deleteDocTarget, setDeleteDocTarget] = useState<Documentation | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Release Notes Modal State
+  const [releasesModalRepo, setReleasesModalRepo] = useState<RepositoryWithDocs | null>(null);
+  const [releases, setReleases] = useState<GitHubRelease[]>([]);
+  const [releasesLoading, setReleasesLoading] = useState(false);
+  const [selectedRelease, setSelectedRelease] = useState<GitHubRelease | null>(null);
+  const [releaseSearchQuery, setReleaseSearchQuery] = useState("");
+  const [savingReleaseAsDoc, setSavingReleaseAsDoc] = useState(false);
+  const [releaseSaveSuccess, setReleaseSaveSuccess] = useState<string | null>(null);
+
+  const handleOpenReleasesModal = async (repo: RepositoryWithDocs) => {
+    setReleasesModalRepo(repo);
+    setReleasesLoading(true);
+    setSelectedRelease(null);
+    setReleaseSearchQuery("");
+    setReleaseSaveSuccess(null);
+
+    try {
+      const data = await getRepoReleases(repo.owner, repo.name);
+      setReleases(data);
+      if (data.length > 0) {
+        setSelectedRelease(data[0]);
+      }
+    } catch (err: any) {
+      console.error("Failed to load release notes:", err);
+    } finally {
+      setReleasesLoading(false);
+    }
+  };
+
+  const handleSaveReleaseAsDoc = async (release: GitHubRelease) => {
+    if (!releasesModalRepo || !release.body) return;
+    setSavingReleaseAsDoc(true);
+    setReleaseSaveSuccess(null);
+
+    try {
+      const fileName = `Release Notes ${release.tag_name}.md`;
+      const docContent = `# Release Notes: ${release.name || release.tag_name}\n\nTag: \`${release.tag_name}\` | Published: ${release.published_at || release.created_at || "N/A"}\n\n---\n\n${release.body}`;
+
+      await createDocumentation(releasesModalRepo.id, {
+        file_name: fileName,
+        file_type: "markdown",
+        content: docContent,
+      });
+
+      setReleaseSaveSuccess(`Saved "${fileName}" to documentation!`);
+      await fetchRepos();
+    } catch (err: any) {
+      alert("Failed to save release notes: " + (err?.message || err));
+    } finally {
+      setSavingReleaseAsDoc(false);
+    }
+  };
 
   const fetchRepos = async () => {
     if (!org) return;
@@ -612,9 +665,18 @@ export default function DocumentationsPage() {
                   </p>
                 </div>
 
-                {/* Right side Add Documentation button when empty */}
-                {(!repo.has_documentation || repo.documentations.length === 0) && (
-                  <div className="shrink-0">
+                {/* Right side buttons: Release Notes & Add Documentation */}
+                <div className="shrink-0 flex items-center gap-2">
+                  <button
+                    onClick={() => handleOpenReleasesModal(repo)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all shadow-sm"
+                    title="View GitHub Release Notes for this repository"
+                  >
+                    <Tag className="w-4 h-4 text-indigo-500" />
+                    <span>Release Notes</span>
+                  </button>
+
+                  {(!repo.has_documentation || repo.documentations.length === 0) && (
                     <button
                       onClick={() => handleOpenAddModal(repo)}
                       className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -622,8 +684,8 @@ export default function DocumentationsPage() {
                       <Plus className="w-4 h-4" />
                       Add Documentation
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Document Action Cards List (shown only when documents exist) */}
@@ -1302,6 +1364,221 @@ export default function DocumentationsPage() {
               >
                 {deleting ? "Deleting..." : "Delete"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GITHUB RELEASE NOTES MODAL */}
+      {releasesModalRepo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"
+            onClick={() => setReleasesModalRepo(null)}
+          />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[85vh]">
+            {/* Modal Top Header Bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/10 dark:bg-indigo-950/60 rounded-xl border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    GitHub Release Notes
+                    <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/50">
+                      {releasesModalRepo.full_name}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Fetched directly from GitHub releases for {releasesModalRepo.name}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://github.com/${releasesModalRepo.owner}/${releasesModalRepo.name}/releases`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <span>View on GitHub</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-500" />
+                </a>
+
+                <button
+                  onClick={() => setReleasesModalRepo(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Left Sidebar (Releases List) + Right Reader (Selected Release) */}
+            <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+              {/* Left Panel: Release Versions List */}
+              <div className="w-full md:w-80 border-r border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 flex flex-col shrink-0">
+                {/* Search Bar inside Releases */}
+                <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search release tags..."
+                      value={releaseSearchQuery}
+                      onChange={(e) => setReleaseSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Release Tags List */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {releasesLoading ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-2 text-xs text-slate-400">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600" />
+                      <span>Fetching releases from GitHub...</span>
+                    </div>
+                  ) : releases.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-400">
+                      No release notes found for this repository.
+                    </div>
+                  ) : (
+                    releases
+                      .filter((r) => {
+                        if (!releaseSearchQuery.trim()) return true;
+                        const q = releaseSearchQuery.toLowerCase();
+                        return (
+                          r.tag_name.toLowerCase().includes(q) ||
+                          (r.name && r.name.toLowerCase().includes(q)) ||
+                          (r.body && r.body.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((rel) => {
+                        const isSelected = selectedRelease?.id === rel.id;
+                        return (
+                          <button
+                            key={rel.id}
+                            onClick={() => setSelectedRelease(rel)}
+                            className={cn(
+                              "w-full text-left p-3 rounded-2xl border transition-all space-y-1.5",
+                              isSelected
+                                ? "bg-indigo-600/10 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                                : "bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono font-bold text-xs flex items-center gap-1.5">
+                                <Tag className="w-3.5 h-3.5 text-indigo-500" />
+                                {rel.tag_name}
+                              </span>
+                              {rel.prerelease ? (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                  Pre-release
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                  Latest
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-medium line-clamp-1 text-slate-700 dark:text-slate-300">
+                              {rel.name || rel.tag_name}
+                            </p>
+
+                            <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                              <span>{relativeTime(rel.published_at || rel.created_at)}</span>
+                            </div>
+                          </button>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
+
+              {/* Right Panel: Release Notes Details & Reader */}
+              <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-950 overflow-hidden">
+                {selectedRelease ? (
+                  <>
+                    {/* Release Header */}
+                    <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 space-y-3 bg-slate-50/40 dark:bg-slate-900/30 shrink-0">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono font-bold text-sm bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-xl border border-indigo-500/20">
+                            {selectedRelease.tag_name}
+                          </span>
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                            {selectedRelease.name || selectedRelease.tag_name}
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleSaveReleaseAsDoc(selectedRelease)}
+                            disabled={savingReleaseAsDoc}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all disabled:opacity-50"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {savingReleaseAsDoc ? "Saving..." : "Save as Doc File"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {releaseSaveSuccess && (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>{releaseSaveSuccess}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                        {selectedRelease.author_login && (
+                          <div className="flex items-center gap-1.5">
+                            {selectedRelease.author_avatar ? (
+                              <img
+                                src={selectedRelease.author_avatar}
+                                alt={selectedRelease.author_login}
+                                className="w-4 h-4 rounded-full"
+                              />
+                            ) : (
+                              <UserIcon className="w-3.5 h-3.5" />
+                            )}
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                              {selectedRelease.author_login}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span>
+                            Published {relativeTime(selectedRelease.published_at || selectedRelease.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Release Notes Markdown Reader */}
+                    <div className="flex-1 overflow-y-auto p-6">
+                      {selectedRelease.body ? (
+                        <MarkdownViewer content={selectedRelease.body} />
+                      ) : (
+                        <div className="text-slate-400 text-xs italic py-8 text-center">
+                          No text content provided for this release.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-slate-400 space-y-2">
+                    <Tag className="w-10 h-10 text-slate-300 dark:text-slate-700" />
+                    <p className="text-sm font-semibold">Select a release tag to view its release notes</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

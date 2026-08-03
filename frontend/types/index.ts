@@ -71,9 +71,16 @@ export interface PullRequest {
   number: number;
   repo: string;
   title: string;
+  body?: string | null;
   state: "OPEN" | "CLOSED" | "MERGED";
   author: string;
   author_avatar: string | null;
+  head_branch?: string | null;
+  base_branch?: string | null;
+  action_file?: string | null;
+  action_status?: "success" | "failure" | "failed" | "passed" | "in_progress" | "cancelled" | string | null;
+  action_name?: string | null;
+  action_file_content?: string | null;
   additions: number;
   deletions: number;
   changed_files: number;
@@ -199,6 +206,20 @@ export interface RepositoryWithDocs {
   synced_at: string | null;
   has_documentation: boolean;
   documentations: Documentation[];
+}
+
+export interface GitHubRelease {
+  id: number;
+  tag_name: string;
+  name: string | null;
+  body: string | null;
+  draft: boolean;
+  prerelease: boolean;
+  created_at?: string | null;
+  published_at?: string | null;
+  html_url: string;
+  author_login?: string | null;
+  author_avatar?: string | null;
 }
 
 export interface Assignee {

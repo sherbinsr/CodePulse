@@ -138,10 +138,16 @@ async def pr_list(
     repo: Optional[str] = Query(None),
     author: Optional[str] = Query(None),
     state: Optional[str] = Query(None),
+    action_status: Optional[str] = Query(None),
+    base_branch: Optional[str] = Query(None),
+    head_branch: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     logger.info("GET PR list for org=%s user=%s", org, current_user.login)
-    return await AnalyticsService(db).get_pr_list(org, repo, author, state, limit, offset)
+    return await AnalyticsService(db).get_pr_list(
+        org, repo, author, state, action_status, base_branch, head_branch, sort_by, limit, offset
+    )

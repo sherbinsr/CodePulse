@@ -9,6 +9,13 @@ class PullRequestOut(BaseModel):
     number: int
     repo: str
     title: str
+    body: Optional[str] = None
+    head_branch: Optional[str] = None
+    base_branch: Optional[str] = None
+    action_file: Optional[str] = None
+    action_status: Optional[str] = None
+    action_name: Optional[str] = None
+    action_file_content: Optional[str] = None
     state: str
     author: str
     author_avatar: Optional[str]
