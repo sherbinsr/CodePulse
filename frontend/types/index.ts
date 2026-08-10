@@ -189,6 +189,7 @@ export interface Documentation {
   s3_key: string;
   s3_url: string | null;
   content: string | null;
+  source?: "manual" | "docs_folder" | string;
   created_at: string;
   updated_at: string;
 }

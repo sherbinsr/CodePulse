@@ -335,6 +335,95 @@ class GitHubService:
             logger.warning("Failed to fetch commits for %s: %s", repo_full_name, exc)
             return []
 
+    async def fetch_repo_docs_folder(
+        self, owner: str, repo: str, default_branch: str = "main"
+    ) -> list[dict]:
+        """Fetch documentation files inside the docs/ folder of a repository."""
+        logger.info("Fetching docs folder files for %s/%s (branch: %s)", owner, repo, default_branch)
+        results: list[dict] = []
+        doc_files_to_fetch: list[str] = []
+
+        # 1. Try recursive git tree endpoint
+        try:
+            tree_data = await self._rest_get(
+                f"/repos/{owner}/{repo}/git/trees/{default_branch}",
+                params={"recursive": "1"},
+            )
+            tree_items = tree_data.get("tree", []) if isinstance(tree_data, dict) else []
+            for item in tree_items:
+                path = item.get("path", "")
+                item_type = item.get("type", "")
+                if item_type == "blob" and (path.startswith("docs/") or path.startswith("doc/")):
+                    doc_files_to_fetch.append(path)
+        except Exception as exc:
+            logger.warning("Recursive git tree query failed for %s/%s: %s", owner, repo, exc)
+
+        # 2. Fallback to /contents/docs if tree returned nothing
+        if not doc_files_to_fetch:
+            for folder_name in ["docs", "doc"]:
+                try:
+                    contents = await self._rest_get(f"/repos/{owner}/{repo}/contents/{folder_name}")
+                    if isinstance(contents, list):
+                        for item in contents:
+                            if item.get("type") == "file":
+                                doc_files_to_fetch.append(item.get("path", ""))
+                except Exception as exc:
+                    logger.debug("Failed to list contents for %s/%s/%s: %s", owner, repo, folder_name, exc)
+
+        if not doc_files_to_fetch:
+            logger.info("No docs folder files found for %s/%s", owner, repo)
+            return results
+
+        # Limit to top 25 doc files per repo to avoid excessive API calls
+        doc_files_to_fetch = doc_files_to_fetch[:25]
+
+        for file_path in doc_files_to_fetch:
+            fname = file_path.split("/")[-1]
+            ext = fname.split(".")[-1].lower() if "." in fname else ""
+
+            if ext in ["md", "markdown", "rst", "txt", "pdf", "doc", "docx", "json", "yaml", "yml"]:
+                if ext in ["md", "markdown"]:
+                    file_type = "markdown"
+                elif ext in ["doc", "docx"]:
+                    file_type = "doc"
+                elif ext == "pdf":
+                    file_type = "pdf"
+                else:
+                    file_type = "txt"
+
+                try:
+                    file_data = await self._rest_get(f"/repos/{owner}/{repo}/contents/{file_path}")
+                    content_str = ""
+                    if isinstance(file_data, dict):
+                        encoding = file_data.get("encoding")
+                        raw_content = file_data.get("content", "")
+                        if encoding == "base64" and raw_content:
+                            try:
+                                import base64
+                                decoded_bytes = base64.b64decode(raw_content)
+                                if file_type in ["markdown", "txt"]:
+                                    content_str = decoded_bytes.decode("utf-8", errors="replace")
+                                else:
+                                    content_str = f"[Binary Document File: {fname}]"
+                            except Exception:
+                                content_str = f"[Document File: {fname}]"
+                        else:
+                            content_str = raw_content or f"[Document File: {fname}]"
+
+                    results.append(
+                        {
+                            "path": file_path,
+                            "file_name": file_path,
+                            "file_type": file_type,
+                            "content": content_str,
+                        }
+                    )
+                except Exception as fetch_err:
+                    logger.warning("Failed to fetch file content for %s/%s/%s: %s", owner, repo, file_path, fetch_err)
+
+        logger.info("Successfully fetched %d docs from docs/ folder for %s/%s", len(results), owner, repo)
+        return results
+
     # ── GitHub Projects (v2) & Issues Methods ─────────────────────────────────
 
     async def get_org_projects_v2(self, org: str) -> list[dict]:

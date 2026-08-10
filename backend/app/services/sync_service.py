@@ -9,12 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import GitHubIssue, GitHubProject
+from app.models.repository import Repository
 
 from app.repositories.ci_repository import CIRepository
 from app.repositories.commit_repository import CommitRepository
 from app.repositories.pr_repository import PRRepository
 from app.repositories.repo_repository import RepoRepository
 from app.repositories.sync_repository import SyncRepository
+from app.services.documentation_service import fetch_and_save_repo_docs_folder
 from app.services.github_service import GitHubService
 from app.services.gitlab_service import GitLabService
 
@@ -270,6 +272,17 @@ class SyncService:
             except Exception as exc:
                 logger.warning("Issue sync failed for %s (non-fatal): %s", full_name, exc)
 
+            try:
+                stmt_r = select(Repository).where(
+                    Repository.full_name == full_name, Repository.provider == "github"
+                )
+                res_r = await self.db.execute(stmt_r)
+                db_repo = res_r.scalar_one_or_none()
+                if db_repo:
+                    await fetch_and_save_repo_docs_folder(self.db, db_repo, custom_token=token)
+            except Exception as exc:
+                logger.warning("Docs folder sync failed for %s (non-fatal): %s", full_name, exc)
+
             repos_synced += 1
             logger.info(
                 "Sync job %d: completed repo %s (%d/%d)",
@@ -433,6 +446,17 @@ class SyncService:
                     await self.commit_repo.bulk_insert(rows)
             except Exception as exc:
                 logger.error("Commit sync failed for %s (non-fatal): %s", full_name, exc)
+
+            try:
+                stmt_r = select(Repository).where(
+                    Repository.full_name == full_name, Repository.provider == "gitlab"
+                )
+                res_r = await self.db.execute(stmt_r)
+                db_repo = res_r.scalar_one_or_none()
+                if db_repo:
+                    await fetch_and_save_repo_docs_folder(self.db, db_repo, custom_token=token)
+            except Exception as exc:
+                logger.warning("Docs folder sync failed for %s (non-fatal): %s", full_name, exc)
 
             repos_synced += 1
             logger.info(

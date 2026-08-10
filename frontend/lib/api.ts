@@ -209,6 +209,19 @@ export const deleteDocumentation = async (docId: number): Promise<{ message: str
   return data;
 };
 
+export const fetchRepoDocsFolder = async (repoId: number): Promise<Documentation[]> => {
+  const { data } = await api.post(`/api/documentations/repo/${repoId}/fetch-docs`);
+  return data;
+};
+
+export const fetchAllRepoDocsFolder = async (
+  org: string,
+  provider: "github" | "gitlab" = "github"
+): Promise<RepositoryWithDocs[]> => {
+  const { data } = await api.post(`/api/documentations/fetch-all-docs?org=${org}&provider=${provider}`);
+  return data;
+};
+
 // GitHub Projects v2 & Issues
 export const getProjects = async (
   org: string,

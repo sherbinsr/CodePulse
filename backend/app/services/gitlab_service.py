@@ -109,6 +109,81 @@ class GitLabService:
             logger.warning("Failed to fetch commits for project %d: %s", project_id, exc)
             return []
 
+    async def fetch_repo_docs_folder(
+        self, project_id: int, default_branch: str = "main"
+    ) -> list[dict]:
+        """Fetch documentation files inside the docs/ folder of a GitLab project."""
+        logger.info("Fetching docs folder files for GitLab project %d (ref: %s)", project_id, default_branch)
+        results: list[dict] = []
+        files_to_fetch: list[str] = []
+
+        for folder_name in ["docs", "doc"]:
+            try:
+                tree_items = await self._get_paginated(
+                    f"/projects/{project_id}/repository/tree",
+                    extra_params={"path": folder_name, "recursive": True, "ref": default_branch},
+                )
+                for item in tree_items:
+                    if item.get("type") == "blob":
+                        files_to_fetch.append(item.get("path", ""))
+            except Exception as exc:
+                logger.warning("Failed to fetch tree for GitLab project %d folder %s: %s", project_id, folder_name, exc)
+
+        if not files_to_fetch:
+            return results
+
+        files_to_fetch = files_to_fetch[:25]
+
+        for file_path in files_to_fetch:
+            fname = file_path.split("/")[-1]
+            ext = fname.split(".")[-1].lower() if "." in fname else ""
+            if ext in ["md", "markdown", "rst", "txt", "pdf", "doc", "docx", "json", "yaml", "yml"]:
+                if ext in ["md", "markdown"]:
+                    file_type = "markdown"
+                elif ext in ["doc", "docx"]:
+                    file_type = "doc"
+                elif ext == "pdf":
+                    file_type = "pdf"
+                else:
+                    file_type = "txt"
+
+                try:
+                    import urllib.parse
+                    encoded_path = urllib.parse.quote(file_path, safe="")
+                    file_meta = await self._get(
+                        f"/projects/{project_id}/repository/files/{encoded_path}",
+                        params={"ref": default_branch},
+                    )
+                    content_str = ""
+                    if isinstance(file_meta, dict):
+                        encoding = file_meta.get("encoding")
+                        raw_content = file_meta.get("content", "")
+                        if encoding == "base64" and raw_content:
+                            import base64
+                            try:
+                                decoded_bytes = base64.b64decode(raw_content)
+                                if file_type in ["markdown", "txt"]:
+                                    content_str = decoded_bytes.decode("utf-8", errors="replace")
+                                else:
+                                    content_str = f"[Binary Document File: {fname}]"
+                            except Exception:
+                                content_str = f"[Document File: {fname}]"
+                        else:
+                            content_str = raw_content or f"[Document File: {fname}]"
+
+                    results.append(
+                        {
+                            "path": file_path,
+                            "file_name": file_path,
+                            "file_type": file_type,
+                            "content": content_str,
+                        }
+                    )
+                except Exception as err:
+                    logger.warning("Failed to fetch GitLab file %s for project %d: %s", file_path, project_id, err)
+
+        return results
+
     @staticmethod
     def parse_datetime(dt_str: Optional[str]) -> Optional[datetime]:
         if not dt_str:

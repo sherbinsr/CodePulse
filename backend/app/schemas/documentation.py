@@ -12,6 +12,7 @@ class DocumentationOut(BaseModel):
     s3_key: str
     s3_url: Optional[str] = None
     content: Optional[str] = None
+    source: str = "manual"
     created_at: datetime
     updated_at: datetime
 
@@ -41,6 +42,7 @@ class CreateDocumentationReq(BaseModel):
     file_name: str
     file_type: str = "markdown"
     content: str
+    source: str = "manual"
 
 
 class UpdateDocumentationReq(BaseModel):

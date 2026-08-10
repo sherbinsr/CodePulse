@@ -4,9 +4,9 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   BookOpen, Search, Plus, Edit3, Trash2, Eye, Download, FileText, CheckCircle2,
-  AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers, Check, Link2, ExternalLink, Globe, Tag, Calendar, User as UserIcon
+  AlertCircle, Cloud, ArrowUpDown, Filter, Sparkles, X, Upload, Code2, RefreshCw, FileCode, Layers, Check, Link2, ExternalLink, Globe, Tag, Calendar, User as UserIcon, FolderGit2
 } from "lucide-react";
-import { getDocumentationRepos, getDocumentationContent, getDocumentationBlobUrl, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation, getRepoReleases } from "@/lib/api";
+import { getDocumentationRepos, getDocumentationContent, getDocumentationBlobUrl, createDocumentation, uploadDocumentationFile, updateDocumentation, deleteDocumentation, getRepoReleases, fetchRepoDocsFolder, fetchAllRepoDocsFolder } from "@/lib/api";
 import type { RepositoryWithDocs, Documentation, GitHubRelease } from "@/types";
 import { cn, relativeTime } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/documentation/markdown-viewer";
@@ -116,7 +116,12 @@ export default function DocumentationsPage() {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "documented" | "missing">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "docs_folder" | "manual">("all");
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "status" | "stars">("status");
+
+  // Fetch docs folder states
+  const [fetchingAllDocs, setFetchingAllDocs] = useState(false);
+  const [fetchingRepoId, setFetchingRepoId] = useState<number | null>(null);
 
   // Modal states
   const [activeModalRepo, setActiveModalRepo] = useState<RepositoryWithDocs | null>(null);
@@ -220,6 +225,31 @@ export default function DocumentationsPage() {
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchRepos();
+  };
+
+  const handleFetchAllDocs = async () => {
+    if (!org) return;
+    setFetchingAllDocs(true);
+    try {
+      const data = await fetchAllRepoDocsFolder(org, provider);
+      setRepos(data);
+    } catch (err: any) {
+      alert("Failed to fetch docs from repos: " + (err?.response?.data?.detail || err?.message || err));
+    } finally {
+      setFetchingAllDocs(false);
+    }
+  };
+
+  const handleFetchRepoDocs = async (repoId: number) => {
+    setFetchingRepoId(repoId);
+    try {
+      await fetchRepoDocsFolder(repoId);
+      await fetchRepos();
+    } catch (err: any) {
+      alert("Failed to fetch docs for repository: " + (err?.response?.data?.detail || err?.message || err));
+    } finally {
+      setFetchingRepoId(null);
+    }
   };
 
   const handleCategorySelect = (cat: string) => {
@@ -431,6 +461,13 @@ export default function DocumentationsPage() {
         if (statusFilter === "documented") return repo.has_documentation;
         if (statusFilter === "missing") return !repo.has_documentation;
 
+        if (sourceFilter === "docs_folder") {
+          return repo.documentations.some((d) => d.source === "docs_folder");
+        }
+        if (sourceFilter === "manual") {
+          return repo.documentations.some((d) => d.source !== "docs_folder");
+        }
+
         return true;
       })
       .sort((a, b) => {
@@ -445,7 +482,7 @@ export default function DocumentationsPage() {
         }
         return 0;
       });
-  }, [repos, searchQuery, statusFilter, sortBy]);
+  }, [repos, searchQuery, statusFilter, sourceFilter, sortBy]);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
@@ -466,14 +503,26 @@ export default function DocumentationsPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
-        >
-          <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-          Refresh Repos
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleFetchAllDocs}
+            disabled={fetchingAllDocs || refreshing}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            title="Scan and fetch docs/ folder documentation across all repositories"
+          >
+            <FolderGit2 className={cn("w-4 h-4", fetchingAllDocs && "animate-spin")} />
+            <span>{fetchingAllDocs ? "Fetching Repo Docs..." : "Fetch Docs from Repos (docs/)"}</span>
+          </button>
+
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing || fetchingAllDocs}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 shadow-sm"
+          >
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+            Refresh Repos
+          </button>
+        </div>
       </div>
 
       {/* Metrics Grid */}
@@ -575,6 +624,44 @@ export default function DocumentationsPage() {
             </button>
           </div>
 
+          {/* Source Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setSourceFilter("all")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                sourceFilter === "all"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              )}
+            >
+              All Sources
+            </button>
+            <button
+              onClick={() => setSourceFilter("docs_folder")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                sourceFilter === "docs_folder"
+                  ? "bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400"
+              )}
+            >
+              <FolderGit2 className="w-3.5 h-3.5" />
+              <span>docs/ folder</span>
+            </button>
+            <button
+              onClick={() => setSourceFilter("manual")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                sourceFilter === "manual"
+                  ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+              )}
+            >
+              Manual Docs
+            </button>
+          </div>
+
           {/* Sort Selector */}
           <div className="relative">
             <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200">
@@ -665,8 +752,18 @@ export default function DocumentationsPage() {
                   </p>
                 </div>
 
-                {/* Right side buttons: Release Notes & Add Documentation */}
+                {/* Right side buttons: Release Notes & Fetch Docs & Add Documentation */}
                 <div className="shrink-0 flex items-center gap-2">
+                  <button
+                    onClick={() => handleFetchRepoDocs(repo.id)}
+                    disabled={fetchingRepoId === repo.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold rounded-xl border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-all shadow-sm disabled:opacity-50"
+                    title="Scan and fetch docs/ folder documentation inside this repository"
+                  >
+                    <FolderGit2 className={cn("w-4 h-4 text-purple-500", fetchingRepoId === repo.id && "animate-spin")} />
+                    <span>{fetchingRepoId === repo.id ? "Fetching..." : "Fetch Docs"}</span>
+                  </button>
+
                   <button
                     onClick={() => handleOpenReleasesModal(repo)}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all shadow-sm"
@@ -694,19 +791,29 @@ export default function DocumentationsPage() {
                   <div className="flex flex-wrap items-center gap-3">
                     {repo.documentations.map((doc) => {
                       const isLinkDoc = doc.file_type === "link" || doc.file_name.endsWith(".link") || doc.content?.trim().startsWith("http");
+                      const isRepoDocFolder = doc.source === "docs_folder";
                       const cleanDocName = doc.file_name.replace(/\.link$/i, "");
                       return (
                         <div key={doc.id} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm max-w-full">
                           {/* Document Name */}
                           <div className="flex items-center gap-2 pr-2.5 border-r border-slate-200 dark:border-slate-700 min-w-0">
-                            {isLinkDoc ? (
+                            {isRepoDocFolder ? (
+                              <FolderGit2 className="w-4 h-4 text-purple-500 shrink-0" />
+                            ) : isLinkDoc ? (
                               <Link2 className="w-4 h-4 text-blue-500 shrink-0" />
                             ) : (
                               <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
                             )}
-                            <span className="text-xs font-mono font-bold text-slate-900 dark:text-white max-w-[140px] truncate" title={cleanDocName}>
-                              {cleanDocName}
-                            </span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-mono font-bold text-slate-900 dark:text-white max-w-[140px] truncate" title={cleanDocName}>
+                                {cleanDocName}
+                              </span>
+                              {isRepoDocFolder && (
+                                <span className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-0.5">
+                                  <span>docs/ folder</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           {/* Action Buttons */}
@@ -1179,11 +1286,17 @@ export default function DocumentationsPage() {
               <div className="flex items-center gap-3">
                 <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-400 shrink-0" />
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white font-mono flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white font-mono flex items-center gap-2 flex-wrap">
                     {viewDoc.doc.file_name}
                     <span className="text-xs font-normal text-slate-400 font-sans">
                       ({viewDoc.doc.file_type})
                     </span>
+                    {viewDoc.doc.source === "docs_folder" && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-sans">
+                        <FolderGit2 className="w-3.5 h-3.5" />
+                        Repository docs/ folder
+                      </span>
+                    )}
                   </h2>
                 </div>
               </div>

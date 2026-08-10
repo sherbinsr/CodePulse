@@ -20,6 +20,7 @@ from app.schemas.documentation import (
     RepositoryWithDocsOut,
     UpdateDocumentationReq,
 )
+from app.services.documentation_service import encode_s3_key, fetch_and_save_repo_docs_folder
 from app.services.github_service import GitHubService
 from app.services.s3_service import S3Service
 
@@ -30,9 +31,7 @@ s3_service = S3Service()
 
 def _encode_s3_key(owner: str, repo: str, file_name: str) -> str:
     """Encode file_name to base64 url-safe string for S3 key storage instead of plain text."""
-    encoded_name = base64.urlsafe_b64encode(file_name.encode("utf-8")).decode("utf-8").rstrip("=")
-    ext = ("." + file_name.rsplit(".", 1)[-1]) if "." in file_name else ""
-    return f"docs/{owner}/{repo}/{encoded_name}{ext}"
+    return encode_s3_key(owner, repo, file_name)
 
 
 @router.get("", response_model=list[RepositoryWithDocsOut])
@@ -64,6 +63,7 @@ async def list_repositories_with_docs(
                 s3_key=d.s3_key,
                 s3_url=d.s3_url,
                 content=d.content,
+                source=getattr(d, "source", "manual") or "manual",
                 created_at=d.created_at,
                 updated_at=d.updated_at,
             )
@@ -372,4 +372,62 @@ async def get_repo_releases(
             logger.warning("Failed to fetch GitHub tags for %s/%s: %s", owner, repo, e)
 
     return output
+
+
+@router.post("/repo/{repo_id}/fetch-docs", response_model=list[DocumentationOut])
+async def fetch_repository_docs_folder_endpoint(
+    repo_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch documentation files inside docs/ folder of a repository from Git provider and save to DB/S3."""
+    stmt = select(Repository).where(Repository.id == repo_id)
+    res = await db.execute(stmt)
+    repo = res.scalar_one_or_none()
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    docs = await fetch_and_save_repo_docs_folder(db, repo, user=current_user)
+    return [
+        DocumentationOut(
+            id=d.id,
+            repository_id=d.repository_id,
+            file_name=d.file_name,
+            file_type=d.file_type,
+            s3_bucket=d.s3_bucket,
+            s3_key=d.s3_key,
+            s3_url=d.s3_url,
+            content=d.content,
+            source=getattr(d, "source", "docs_folder") or "docs_folder",
+            created_at=d.created_at,
+            updated_at=d.updated_at,
+        )
+        for d in docs
+    ]
+
+
+@router.post("/fetch-all-docs", response_model=list[RepositoryWithDocsOut])
+async def fetch_all_repositories_docs_folder_endpoint(
+    org: str = Query(..., description="Organization or owner name"),
+    provider: str = Query("github", pattern="^(github|gitlab)$"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch documentation files inside docs/ folder for all organization repositories."""
+    stmt = (
+        select(Repository)
+        .where(Repository.owner.ilike(org), Repository.provider == provider)
+        .order_by(Repository.name.asc())
+    )
+    result = await db.execute(stmt)
+    repos = result.scalars().all()
+
+    for repo in repos:
+        try:
+            await fetch_and_save_repo_docs_folder(db, repo, user=current_user)
+        except Exception as exc:
+            logger.warning("Failed to fetch docs folder for repo %s: %s", repo.full_name, exc)
+
+    return await list_repositories_with_docs(org=org, provider=provider, current_user=current_user, db=db)
+
 
