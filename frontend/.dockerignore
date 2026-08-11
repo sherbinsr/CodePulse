@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+build/
+.git/
+.gitignore
+.env*.local
+.env
+README.md
+take-screenshots.cjs
+demo-codepulse.cjs
+screenshots/
+Dockerfile*
