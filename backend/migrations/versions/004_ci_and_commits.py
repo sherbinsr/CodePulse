@@ -33,9 +33,29 @@ def upgrade() -> None:
             sa.Column("created_at", sa.DateTime, nullable=False),
             sa.Column("synced_at", sa.DateTime, nullable=False),
         )
-        op.create_index("ix_workflow_runs_repo_full_name", "workflow_runs", ["repo_full_name"])
-        op.create_index("ix_workflow_runs_org", "workflow_runs", ["org"])
-        op.create_index("ix_workflow_runs_created_at", "workflow_runs", ["created_at"])
+        try:
+            op.create_index("ix_workflow_runs_repo_full_name", "workflow_runs", ["repo_full_name"], if_not_exists=True)
+            op.create_index("ix_workflow_runs_org", "workflow_runs", ["org"], if_not_exists=True)
+            op.create_index("ix_workflow_runs_created_at", "workflow_runs", ["created_at"], if_not_exists=True)
+        except Exception:
+            pass
+    else:
+        wf_indexes = [idx["name"] for idx in inspector.get_indexes("workflow_runs")]
+        if "ix_workflow_runs_repo_full_name" not in wf_indexes:
+            try:
+                op.create_index("ix_workflow_runs_repo_full_name", "workflow_runs", ["repo_full_name"], if_not_exists=True)
+            except Exception:
+                pass
+        if "ix_workflow_runs_org" not in wf_indexes:
+            try:
+                op.create_index("ix_workflow_runs_org", "workflow_runs", ["org"], if_not_exists=True)
+            except Exception:
+                pass
+        if "ix_workflow_runs_created_at" not in wf_indexes:
+            try:
+                op.create_index("ix_workflow_runs_created_at", "workflow_runs", ["created_at"], if_not_exists=True)
+            except Exception:
+                pass
 
     if not inspector.has_table("commits"):
         op.create_table(
@@ -50,10 +70,36 @@ def upgrade() -> None:
             sa.Column("committed_at", sa.DateTime, nullable=False),
             sa.Column("synced_at", sa.DateTime, nullable=False),
         )
-        op.create_index("ix_commits_repo_full_name", "commits", ["repo_full_name"])
-        op.create_index("ix_commits_org", "commits", ["org"])
-        op.create_index("ix_commits_author_login", "commits", ["author_login"])
-        op.create_index("ix_commits_committed_at", "commits", ["committed_at"])
+        try:
+            op.create_index("ix_commits_repo_full_name", "commits", ["repo_full_name"], if_not_exists=True)
+            op.create_index("ix_commits_org", "commits", ["org"], if_not_exists=True)
+            op.create_index("ix_commits_author_login", "commits", ["author_login"], if_not_exists=True)
+            op.create_index("ix_commits_committed_at", "commits", ["committed_at"], if_not_exists=True)
+        except Exception:
+            pass
+    else:
+        cm_indexes = [idx["name"] for idx in inspector.get_indexes("commits")]
+        if "ix_commits_repo_full_name" not in cm_indexes:
+            try:
+                op.create_index("ix_commits_repo_full_name", "commits", ["repo_full_name"], if_not_exists=True)
+            except Exception:
+                pass
+        if "ix_commits_org" not in cm_indexes:
+            try:
+                op.create_index("ix_commits_org", "commits", ["org"], if_not_exists=True)
+            except Exception:
+                pass
+        if "ix_commits_author_login" not in cm_indexes:
+            try:
+                op.create_index("ix_commits_author_login", "commits", ["author_login"], if_not_exists=True)
+            except Exception:
+                pass
+        if "ix_commits_committed_at" not in cm_indexes:
+            try:
+                op.create_index("ix_commits_committed_at", "commits", ["committed_at"], if_not_exists=True)
+            except Exception:
+                pass
+
 
 
 def downgrade() -> None:
