@@ -511,7 +511,7 @@ export default function DocumentationsPage() {
             title="Scan and fetch docs/ folder documentation across all repositories"
           >
             <FolderGit2 className={cn("w-4 h-4", fetchingAllDocs && "animate-spin")} />
-            <span>{fetchingAllDocs ? "Fetching Repo Docs..." : "Fetch Docs from Repos (docs/)"}</span>
+            <span>{fetchingAllDocs ? "Fetching Repo Docs..." : "Fetch Docs from Repos"}</span>
           </button>
 
           <button

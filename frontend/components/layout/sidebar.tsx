@@ -25,7 +25,6 @@ const navItems: NavItem[] = [
   { href: "/dashboard",               icon: Home,           label: "Overview",       requiresOrg: false },
   { href: "/dashboard/projects",      icon: Kanban,         label: "Projects",       requiresOrg: true },
   { href: "/dashboard/repositories",  icon: GitBranch,      label: "Repositories",   requiresOrg: true },
-  { href: "/dashboard/pull-requests",  icon: GitPullRequest, label: "Pull Requests",  requiresOrg: true },
   { href: "/dashboard/documentations",icon: BookOpen,       label: "Documentation",  requiresOrg: true },
   { href: "/dashboard/developers",    icon: Users,          label: "Developers",     requiresOrg: true },
   { href: "/dashboard/reviews",       icon: Star,           label: "Reviews",        requiresOrg: true },
