@@ -36,7 +36,7 @@ function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) 
       </div>
       <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">No Organization Access</h2>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">
-        CodePulse couldn't find any GitHub organizations linked to your account.
+        GitAudit couldn't find any GitHub organizations linked to your account.
         This happens for one of two reasons:
       </p>
 
@@ -44,7 +44,7 @@ function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) 
         <div className="flex gap-3">
           <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
           <div>
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Re-authorize CodePulse with org access</p>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Re-authorize GitAudit with org access</p>
             <p className="text-xs text-slate-500 mt-0.5">
               Click the button below to re-authorize and grant the <code className="bg-slate-200 px-1 rounded">read:org</code> permission.
             </p>
@@ -53,7 +53,7 @@ function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) 
         <div className="flex gap-3">
           <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
           <div>
-            <p className="text-sm font-medium text-slate-800">Approve CodePulse in your organization settings</p>
+            <p className="text-sm font-medium text-slate-800">Approve GitAudit in your organization settings</p>
             <p className="text-xs text-slate-500 mt-0.5">
               If your org has third-party restrictions enabled, an org owner must approve the app at{" "}
               <a

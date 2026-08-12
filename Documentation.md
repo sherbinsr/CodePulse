@@ -1,12 +1,12 @@
-# CodePulse Architecture & Technical Documentation
+# GitAudit Architecture & Technical Documentation
 
-CodePulse is an enterprise-grade Git Engineering Intelligence & Repository Management Platform built for software engineering teams, engineering directors, and project leads. It unifies repository analytics, automated PR & CI tracking, multi-file repository documentation, built-in repository Kanban project management, and multi-provider OAuth (GitHub & GitLab) into a single, real-time dashboard.
+GitAudit is an enterprise-grade Git Engineering Intelligence & Repository Management Platform built for software engineering teams, engineering directors, and project leads. It unifies repository analytics, automated PR & CI tracking, multi-file repository documentation, built-in repository Kanban project management, and multi-provider OAuth (GitHub & GitLab) into a single, real-time dashboard.
 
 ---
 
 ## 1. System Architecture Overview
 
-CodePulse follows a modern **decoupled micro-service client-server architecture** using Next.js on the frontend, FastAPI on the backend, and PostgreSQL with AWS S3 for persistence.
+GitAudit follows a modern **decoupled micro-service client-server architecture** using Next.js on the frontend, FastAPI on the backend, and PostgreSQL with AWS S3 for persistence.
 
 ```mermaid
 flowchart TB
@@ -76,7 +76,7 @@ flowchart TB
 
 ## 3. Database Architecture & ER Diagram
 
-CodePulse uses a relational model in PostgreSQL designed for low latency queries, case-insensitive organization searching, and rich project task associations.
+GitAudit uses a relational model in PostgreSQL designed for low latency queries, case-insensitive organization searching, and rich project task associations.
 
 ```mermaid
 erDiagram
@@ -270,10 +270,10 @@ GITHUB_REDIRECT_URI=http://localhost:3000/auth/callback
 SECRET_KEY=your_super_secret_jwt_key_here
 
 # ── Database ─────────────────────────────────────────────────────────────────
-POSTGRES_USER=codepulse
-POSTGRES_PASSWORD=codepulse
-POSTGRES_DB=codepulse
-DATABASE_URL=postgresql+asyncpg://codepulse:codepulse@localhost:5432/codepulse
+POSTGRES_USER=gitaudit
+POSTGRES_PASSWORD=gitaudit
+POSTGRES_DB=gitaudit
+DATABASE_URL=postgresql+asyncpg://gitaudit:gitaudit@localhost:5432/gitaudit
 
 # ── AWS S3 Storage ───────────────────────────────────────────────────────────
 AWS_ACCESS_KEY_ID=your_aws_access_key
@@ -300,4 +300,4 @@ Services will be available at:
 - **PostgreSQL Database**: `localhost:5432`
 
 ---
-*Documentation compiled for CodePulse Repository Management Platform.*
+*Documentation compiled for GitAudit Repository Management Platform.*

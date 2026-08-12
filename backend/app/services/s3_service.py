@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 class S3Service:
     def __init__(self):
-        self.bucket_name = settings.s3_bucket_name or "codepulse-documentation"
+        self.bucket_name = settings.s3_bucket_name or "gitaudit"
         self.region = settings.aws_region or "us-east-1"
         self.access_key = settings.aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID", "")
         self.secret_key = settings.aws_secret_access_key or os.getenv("AWS_SECRET_ACCESS_KEY", "")
         self.endpoint_url = settings.s3_endpoint_url or os.getenv("AWS_ENDPOINT_URL", None)
 
         # Fallback local directory if S3 credentials not configured or unreachable
-        self.local_storage_dir = Path("/tmp/codepulse_s3_data") / self.bucket_name
+        self.local_storage_dir = Path("/tmp/gitaudit_s3_data") / self.bucket_name
         self.local_storage_dir.mkdir(parents=True, exist_ok=True)
 
         self.s3_client = None

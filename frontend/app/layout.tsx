@@ -7,10 +7,10 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://codepulse.dev"),
+  metadataBase: new URL("https://gitaudit.dev"),
   title: {
-    default: "CodePulse — Engineering Analytics",
-    template: "%s | CodePulse",
+    default: "GitAudit — Engineering Analytics",
+    template: "%s | GitAudit",
   },
   description:
     "PR analytics and engineering productivity platform for GitHub teams. Track pull requests, review times, CI pipelines, and developer performance.",
@@ -26,21 +26,21 @@ export const metadata: Metadata = {
     "team velocity",
     "DevOps analytics",
   ],
-  authors: [{ name: "CodePulse" }],
-  creator: "CodePulse",
+  authors: [{ name: "GitAudit" }],
+  creator: "GitAudit",
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
   },
   openGraph: {
-    siteName: "CodePulse",
+    siteName: "GitAudit",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    creator: "@codepulse",
+    creator: "@gitaudit",
   },
   icons: {
     icon: "/icon.svg",

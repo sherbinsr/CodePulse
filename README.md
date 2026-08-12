@@ -1,4 +1,4 @@
-# CodePulse
+# GitAudit
 
 Engineering Productivity & PR Analytics Platform. Connect your GitHub or GitLab organization and get deep insights into pull requests, code reviews, developer performance, CI health, team velocity, and project documentation — all stored locally for fast, rate-limit-free dashboards.
 
@@ -113,7 +113,7 @@ migrations/     Alembic — schema versioning
 ## Project Structure
 
 ```
-CodePulse/
+GitAudit/
 ├── backend/
 │   ├── app/
 │   │   ├── models/             # SQLAlchemy ORM models (Documentation, Repositories, etc.)
@@ -168,8 +168,8 @@ CodePulse/
 ### 1. Clone & setup environment
 
 ```bash
-git clone https://github.com/abhinavkloudwin/CodePulse.git
-cd CodePulse
+git clone https://github.com/abhinavkloudwin/GitAudit.git
+cd GitAudit
 ```
 
 Create backend env:
@@ -201,9 +201,9 @@ Copy the **Client ID** and **Client Secret** into `backend/.env` and `frontend/.
 psql -U postgres
 ```
 ```sql
-CREATE USER codepulse WITH PASSWORD 'codepulse';
-CREATE DATABASE codepulse OWNER codepulse;
-GRANT ALL PRIVILEGES ON DATABASE codepulse TO codepulse;
+CREATE USER gitaudit WITH PASSWORD 'gitaudit';
+CREATE DATABASE gitaudit OWNER gitaudit;
+GRANT ALL PRIVILEGES ON DATABASE gitaudit TO gitaudit;
 \q
 ```
 

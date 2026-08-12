@@ -97,7 +97,7 @@ export function Sidebar({ org, provider = "github", hasOrg, orgs = [], onOrgChan
           <div className="bg-indigo-600 rounded-lg p-1.5 shrink-0">
             <GitBranch className="h-4 w-4 text-white" />
           </div>
-          <span className="text-white font-bold text-base tracking-tight">CodePulse</span>
+          <span className="text-white font-bold text-base tracking-tight">GitAudit</span>
         </div>
 
         {/* Organization Section */}
@@ -248,7 +248,7 @@ export function Sidebar({ org, provider = "github", hasOrg, orgs = [], onOrgChan
                 Authorize GitHub Organization Access
               </span>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Grant CodePulse permission to access your private or enterprise GitHub organizations via GitHub OAuth.
+                Grant GitAudit permission to access your private or enterprise GitHub organizations via GitHub OAuth.
               </p>
 
               <button
@@ -324,7 +324,7 @@ export function Sidebar({ org, provider = "github", hasOrg, orgs = [], onOrgChan
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
               <h3 className="text-lg font-bold text-white">Sign Out</h3>
-              <p className="text-sm text-slate-400">Are you sure you want to sign out of CodePulse?</p>
+              <p className="text-sm text-slate-400">Are you sure you want to sign out of GitAudit?</p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}

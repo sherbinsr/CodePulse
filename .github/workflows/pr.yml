@@ -41,13 +41,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: codepulse
-          POSTGRES_USER: codepulse
-          POSTGRES_PASSWORD: codepulse
+          POSTGRES_DB: gitaudit
+          POSTGRES_USER: gitaudit
+          POSTGRES_PASSWORD: gitaudit
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U codepulse"
+          --health-cmd "pg_isready -U gitaudit"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -65,13 +65,13 @@ jobs:
       - name: Apply all migrations
         working-directory: backend
         env:
-          DATABASE_URL: postgresql+asyncpg://codepulse:codepulse@localhost:5432/codepulse
+          DATABASE_URL: postgresql+asyncpg://gitaudit:gitaudit@localhost:5432/gitaudit
         run: alembic upgrade head
 
       - name: Verify DB is at head revision
         working-directory: backend
         env:
-          DATABASE_URL: postgresql+asyncpg://codepulse:codepulse@localhost:5432/codepulse
+          DATABASE_URL: postgresql+asyncpg://gitaudit:gitaudit@localhost:5432/gitaudit
         run: alembic check
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -178,18 +178,18 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: codepulse
-          POSTGRES_USER: codepulse
-          POSTGRES_PASSWORD: codepulse
+          POSTGRES_DB: gitaudit
+          POSTGRES_USER: gitaudit
+          POSTGRES_PASSWORD: gitaudit
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U codepulse"
+          --health-cmd "pg_isready -U gitaudit"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+asyncpg://codepulse:codepulse@localhost:5432/codepulse
+      DATABASE_URL: postgresql+asyncpg://gitaudit:gitaudit@localhost:5432/gitaudit
       SECRET_KEY: ci-test-secret-key
       GITHUB_CLIENT_ID: ci_placeholder
       GITHUB_CLIENT_SECRET: ci_placeholder

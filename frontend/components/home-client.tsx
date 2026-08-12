@@ -46,9 +46,9 @@ export default function HomeClient() {
           className="flex items-center justify-between px-8 py-4"
           aria-label="Main navigation"
         >
-          <a href="/" className="flex items-center gap-2" aria-label="CodePulse home">
+          <a href="/" className="flex items-center gap-2" aria-label="GitAudit home">
             <GitBranch className="h-6 w-6 text-indigo-400" aria-hidden="true" />
-            <span className="text-white font-bold text-xl">CodePulse</span>
+            <span className="text-white font-bold text-xl">GitAudit</span>
           </a>
           <div className="flex items-center gap-3">
             <button

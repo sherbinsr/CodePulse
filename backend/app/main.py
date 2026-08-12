@@ -8,7 +8,13 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import init_db
-from app.routers import analytics_router, auth_router, documentation_router, org_router, project_router
+from app.routers import (
+    analytics_router,
+    auth_router,
+    documentation_router,
+    org_router,
+    project_router,
+)
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -41,15 +47,15 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("CodePulse API starting up")
+    logger.info("GitAudit API starting up")
     await init_db()
     logger.info("Database initialized")
     yield
-    logger.info("CodePulse API shutting down")
+    logger.info("GitAudit API shutting down")
 
 
 app = FastAPI(
-    title="CodePulse API",
+    title="GitAudit API",
     description="Engineering Productivity & PR Analytics Platform",
     version="1.0.0",
     lifespan=lifespan,

@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const BASE_URL = 'http://localhost:3000';
 const VIDEO_DIR = path.join(__dirname, 'screenshots');
-const OUTPUT_NAME = 'codepulse-demo.webm';
+const OUTPUT_NAME = 'gitaudit-demo.webm';
 const REHEARSAL = process.argv.includes('--rehearse');
 
 // ── Dummy Data ────────────────────────────────────────────────────────────────
@@ -436,7 +436,7 @@ async function record(browser) {
     await page.waitForTimeout(800);
     await injectCursor(page);
     await injectSubtitleBar(page);
-    await showSubtitle(page, 'CodePulse — Engineering Analytics Platform');
+    await showSubtitle(page, 'GitAudit — Engineering Analytics Platform');
     await page.waitForTimeout(1800);
 
     // Pan the landing page headings
@@ -699,7 +699,7 @@ async function record(browser) {
       }
     }
 
-    await showSubtitle(page, 'CodePulse — Built with GitHub API + Next.js + FastAPI');
+    await showSubtitle(page, 'GitAudit — Built with GitHub API + Next.js + FastAPI');
     await panElements(page, '[class*="rounded-2xl"]', 4);
     await page.waitForTimeout(2500);
     await showSubtitle(page, '');

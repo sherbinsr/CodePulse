@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://codepulse:codepulse@localhost:5432/codepulse"
+    database_url: str = "postgresql+asyncpg://gitaudit:gitaudit@localhost:5432/gitaudit"
     github_client_id: str = ""
     github_client_secret: str = ""
     github_redirect_uri: str = "http://localhost:3000/auth/callback"
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
-    s3_bucket_name: str = "codepulse-documentation"
+    s3_bucket_name: str = "gitaudit"
     s3_endpoint_url: str = ""
 
     class Config:

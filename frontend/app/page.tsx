@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import HomeClient from "@/components/home-client";
 
 export const metadata: Metadata = {
-  title: "CodePulse — Engineering Analytics & PR Insights",
+  title: "GitAudit — Engineering Analytics & PR Insights",
   description:
-    "Connect your GitHub organization and get instant analytics on pull requests, code reviews, developer performance, CI pipelines, and team velocity. Ship faster with CodePulse.",
+    "Connect your GitHub organization and get instant analytics on pull requests, code reviews, developer performance, CI pipelines, and team velocity. Ship faster with GitAudit.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "CodePulse — Engineering Analytics & PR Insights",
+    title: "GitAudit — Engineering Analytics & PR Insights",
     description:
       "Real-time GitHub analytics for engineering teams. Track PR velocity, review times, contributor leaderboards, and CI health in one dashboard.",
     url: "/",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CodePulse — Engineering Analytics & PR Insights",
+    title: "GitAudit — Engineering Analytics & PR Insights",
     description:
       "Real-time GitHub analytics for engineering teams. Track PR velocity, review times, contributor leaderboards, and CI health in one dashboard.",
   },
@@ -32,7 +32,7 @@ export default function HomePage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            name: "CodePulse",
+            name: "GitAudit",
             applicationCategory: "DeveloperApplication",
             description:
               "Engineering analytics platform providing real-time insights on GitHub pull requests, code reviews, developer performance, CI pipelines, and team velocity.",

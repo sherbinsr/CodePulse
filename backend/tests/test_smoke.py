@@ -47,7 +47,7 @@ def test_openapi_docs_reachable(client):
 def test_openapi_schema_title(client):
     r = client.get("/openapi.json")
     assert r.status_code == 200
-    assert r.json()["info"]["title"] == "CodePulse API"
+    assert r.json()["info"]["title"] == "GitAudit API"
 
 
 # ── Auth guard ────────────────────────────────────────────────────────────────

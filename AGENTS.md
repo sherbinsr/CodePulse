@@ -1,6 +1,6 @@
-# CodePulse — AI Agent Developer Guide (`AGENTS.md`)
+# GitAudit — AI Agent Developer Guide (`AGENTS.md`)
 
-Welcome to **CodePulse**! This repository is an enterprise-grade Engineering Productivity & PR Analytics Platform featuring repository documentation management, developer performance insights, CI build health tracking, and project Kanban boards.
+Welcome to **GitAudit**! This repository is an enterprise-grade Engineering Productivity & PR Analytics Platform featuring repository documentation management, developer performance insights, CI build health tracking, and project Kanban boards.
 
 This document serves as the authoritative operational guide for AI coding agents and human developers working on this codebase.
 
@@ -8,7 +8,7 @@ This document serves as the authoritative operational guide for AI coding agents
 
 ## 1. System & Architecture Overview
 
-CodePulse uses a decoupled client-server architecture with a Next.js frontend, a FastAPI backend, PostgreSQL for relational data, and AWS S3 (or S3-compatible MinIO) for document blob storage.
+GitAudit uses a decoupled client-server architecture with a Next.js frontend, a FastAPI backend, PostgreSQL for relational data, and AWS S3 (or S3-compatible MinIO) for document blob storage.
 
 ```mermaid
 flowchart TB
@@ -63,7 +63,7 @@ flowchart TB
 ## 2. Project Directory Structure
 
 ```
-CodePulse/
+GitAudit/
 ├── agent.md                    # AI Agent Guide
 ├── AGENTS.md                   # AI Agent Guide (this file)
 ├── Documentation.md            # Comprehensive system & technical docs
@@ -137,7 +137,7 @@ CodePulse/
 
 ### Environment Files
 1. Copy [`.env.example`](file:///Users/abhinavp/Projects/CodePulse/.env.example) to `backend/.env` and fill in:
-   - `DATABASE_URL=postgresql+asyncpg://codepulse:codepulse@localhost:5432/codepulse`
+   - `DATABASE_URL=postgresql+asyncpg://gitaudit:gitaudit@localhost:5432/gitaudit`
    - `SECRET_KEY=your_jwt_secret_key`
    - `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
    - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME=gitaudit`
