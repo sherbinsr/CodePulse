@@ -14,11 +14,22 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "documentations",
-        sa.Column("source", sa.String(50), nullable=False, server_default="manual"),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if inspector.has_table("documentations"):
+        cols = [c["name"] for c in inspector.get_columns("documentations")]
+        if "source" not in cols:
+            op.add_column(
+                "documentations",
+                sa.Column("source", sa.String(50), nullable=False, server_default="manual"),
+            )
 
 
 def downgrade() -> None:
-    op.drop_column("documentations", "source")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if inspector.has_table("documentations"):
+        cols = [c["name"] for c in inspector.get_columns("documentations")]
+        if "source" in cols:
+            op.drop_column("documentations", "source")
+

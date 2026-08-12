@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -16,8 +17,6 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-
-from sqlalchemy import text
 
 async def init_db():
     import app.models  # noqa: F401 — registers all models with Base.metadata
@@ -42,6 +41,15 @@ async def init_db():
             except Exception:
                 pass
 
+        # Auto-migrate documentations table columns
+        try:
+            await conn.execute(text("ALTER TABLE documentations ADD COLUMN IF NOT EXISTS source VARCHAR(50) NOT NULL DEFAULT 'manual'"))
+        except Exception:
+            try:
+                await conn.execute(text("ALTER TABLE documentations ADD COLUMN source VARCHAR(50) DEFAULT 'manual'"))
+            except Exception:
+                pass
+
         # Auto-migrate pull_requests table columns
         pr_cols = [
             ("body", "TEXT"),
@@ -60,4 +68,3 @@ async def init_db():
                     await conn.execute(text(f"ALTER TABLE pull_requests ADD COLUMN {col} {col_type}"))
                 except Exception:
                     pass
-
