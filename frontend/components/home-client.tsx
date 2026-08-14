@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getToken, getGitHubOAuthUrl, getGitLabOAuthUrl } from "@/lib/auth";
 import { GitBranch, BarChart3, Users, Clock, Zap } from "lucide-react";
+import Footer from "@/components/layout/footer";
 
 const GitHubIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -124,6 +125,7 @@ export default function HomeClient() {
           ))}
         </section>
       </main>
+      <Footer />
     </div>
   );
 }
