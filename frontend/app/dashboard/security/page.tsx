@@ -14,6 +14,7 @@ import {
   getDocumentationRepos,
   getSyncStatus,
   deleteVulnerabilityScan,
+  getRepoBranches,
 } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import type {
@@ -24,6 +25,7 @@ import type {
   VulnerabilityScanSummary,
   VulnerabilityFinding,
   DependencyReportItem,
+  RepoBranch,
 } from "@/types";
 import {
   ShieldCheck,
@@ -49,6 +51,7 @@ import {
   Trash2,
   Sparkles,
   Zap,
+  GitBranch,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,9 +64,12 @@ function SecurityContent() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
 
-  // Repositories
+  // Repositories & Branches
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string>("");
+  const [branches, setBranches] = useState<RepoBranch[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("main");
+  const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
 
   // Scan state
   const [currentScan, setCurrentScan] = useState<VulnerabilityScan | null>(null);
@@ -118,6 +124,9 @@ function SecurityContent() {
         if (latest) {
           setCurrentScan(latest);
           setSelectedRepo(latest.repo_name);
+          if (latest.branch) {
+            setSelectedBranch(latest.branch);
+          }
         }
       }
     } catch {
@@ -132,12 +141,46 @@ function SecurityContent() {
     loadInitial();
   }, [loadInitial]);
 
+  // Fetch branches whenever selected repository changes
+  useEffect(() => {
+    if (!org || !selectedRepo) return;
+    let active = true;
+    setLoadingBranches(true);
+
+    getRepoBranches(org, selectedRepo, provider)
+      .then((res) => {
+        if (!active) return;
+        const branchList = res.branches || [];
+        setBranches(branchList);
+        const branchNames = branchList.map((b) => b.name);
+
+        if (res.default_branch && (!selectedBranch || !branchNames.includes(selectedBranch))) {
+          setSelectedBranch(res.default_branch);
+        } else if (!selectedBranch && branchNames.length > 0) {
+          setSelectedBranch(branchNames[0]);
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setBranches([{ name: "main" }]);
+        if (!selectedBranch) setSelectedBranch("main");
+      })
+      .finally(() => {
+        if (active) setLoadingBranches(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [org, selectedRepo, provider]);
+
   const handleSelectScan = async (scanId: number) => {
     setLoading(true);
     try {
       const scan = await getVulnerabilityScan(scanId);
       setCurrentScan(scan);
       setSelectedRepo(scan.repo_name);
+      if (scan.branch) setSelectedBranch(scan.branch);
       setExpandedFindings({});
     } catch {
       toast.error("Failed to load scan details.");
@@ -179,7 +222,7 @@ function SecurityContent() {
     }
 
     setScanning(true);
-    setScanningStep("Step 1/5: Auditing dependencies & manifests...");
+    setScanningStep(`Step 1/5: Auditing dependencies & manifests on branch '${selectedBranch || "main"}'...`);
 
     const stepInterval = setInterval(() => {
       setScanningStep((prev) => {
@@ -195,6 +238,7 @@ function SecurityContent() {
       const newScan = await runVulnerabilityScan({
         org,
         repo_name: selectedRepo,
+        branch: selectedBranch || "main",
         provider,
         openai_api_key: keyToUse,
       });
@@ -207,6 +251,7 @@ function SecurityContent() {
           org: newScan.org,
           repo_name: newScan.repo_name,
           repo_full_name: newScan.repo_full_name,
+          branch: newScan.branch || selectedBranch,
           provider: newScan.provider,
           security_score: newScan.security_score,
           grade: newScan.grade,
@@ -221,7 +266,9 @@ function SecurityContent() {
       ]);
       setShowKeyPrompt(false);
       setExpandedFindings({});
-      toast.success(`Vulnerability scan completed for ${selectedRepo}! Score: ${newScan.security_score}/100`);
+      toast.success(
+        `Vulnerability scan completed for ${selectedRepo} (${newScan.branch || selectedBranch})! Score: ${newScan.security_score}/100`
+      );
     } catch (err: any) {
       clearInterval(stepInterval);
       const detail = err?.response?.data?.detail || err.message;
@@ -249,6 +296,7 @@ function SecurityContent() {
     const s = currentScan;
     let md = `# Vulnerability Assessment Report\n\n`;
     md += `**Repository:** ${s.repo_full_name}\n`;
+    md += `**Target Branch:** ${s.branch || "main"}\n`;
     md += `**Security Score:** ${s.security_score}/100 (Grade ${s.grade})\n`;
     md += `**Date:** ${new Date(s.created_at).toUTCString()}\n`;
     md += `**Model:** ${s.model_used || "OpenAI"}\n\n`;
@@ -290,7 +338,7 @@ function SecurityContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${s.repo_name}-vulnerability-report.md`;
+    a.download = `${s.repo_name}-${s.branch || "main"}-vulnerability-report.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -301,7 +349,7 @@ function SecurityContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${currentScan.repo_name}-vulnerability-report.json`;
+    a.download = `${currentScan.repo_name}-${currentScan.branch || "main"}-vulnerability-report.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -362,22 +410,59 @@ function SecurityContent() {
 
             {/* Controls */}
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              {/* Repository Selector */}
               {repos.length > 0 ? (
-                <select
-                  value={selectedRepo}
-                  onChange={(e) => setSelectedRepo(e.target.value)}
-                  disabled={scanning}
-                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs font-semibold rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  {repos.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+                  <select
+                    value={selectedRepo}
+                    onChange={(e) => setSelectedRepo(e.target.value)}
+                    disabled={scanning}
+                    className="bg-transparent text-slate-900 dark:text-slate-100 text-xs font-semibold focus:outline-none cursor-pointer"
+                  >
+                    {repos.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <span className="text-xs text-slate-400">No synced repositories</span>
               )}
+
+              {/* Branch Selector */}
+              <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+                <GitBranch className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                {loadingBranches ? (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                ) : branches.length > 0 ? (
+                  <select
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    disabled={scanning}
+                    className="bg-transparent text-slate-900 dark:text-slate-100 text-xs font-semibold focus:outline-none cursor-pointer"
+                    title="Select branch to scan"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.name} value={b.name}>
+                        {b.name} {b.protected ? "🛡️" : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    placeholder="branch"
+                    disabled={scanning}
+                    className="bg-transparent text-slate-900 dark:text-slate-100 text-xs font-semibold focus:outline-none w-24"
+                  />
+                )}
+              </div>
 
               <button
                 onClick={handleTriggerScan}
@@ -487,7 +572,7 @@ function SecurityContent() {
                 No Vulnerability Scans Yet for {selectedRepo || "this repository"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Select a repository above and click <strong>Run Vulnerability Scan</strong> to generate a complete security audit, dependency analysis, and score.
+                Select a repository and branch above and click <strong>Run Vulnerability Scan</strong> to generate a complete security audit, dependency analysis, and score.
               </p>
             </div>
             <button
@@ -508,9 +593,15 @@ function SecurityContent() {
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Security Health Score
                   </span>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Model: {currentScan.model_used || "OpenAI"}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                      <GitBranch className="w-3 h-3" />
+                      {currentScan.branch || "main"}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {currentScan.model_used || "OpenAI"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-5 my-2">
@@ -666,7 +757,7 @@ function SecurityContent() {
                     Vulnerability Findings ({filteredFindings.length})
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Code pattern analysis, secrets exposure, configuration weaknesses, and infrastructure risks.
+                    Code pattern analysis, secrets exposure, configuration weaknesses, and infrastructure risks on branch <strong>{currentScan.branch || "main"}</strong>.
                   </p>
                 </div>
 
@@ -699,72 +790,59 @@ function SecurityContent() {
                     return (
                       <div
                         key={idx}
-                        className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all"
+                        className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-800/30 space-y-3 transition-all"
                       >
                         <div
+                          className="flex items-start justify-between gap-3 cursor-pointer select-none"
                           onClick={() => toggleFinding(idx)}
-                          className="p-4 sm:p-5 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/80 cursor-pointer transition-colors"
                         >
-                          <div className="space-y-1.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                  f.severity.toUpperCase() === "CRITICAL"
-                                    ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
-                                    : f.severity.toUpperCase() === "HIGH"
-                                    ? "bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-800"
-                                    : f.severity.toUpperCase() === "MEDIUM"
-                                    ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
-                                    : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800"
-                                }`}
-                              >
-                                {f.severity}
-                              </span>
-
-                              {f.cvss > 0 && (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono">
-                                  CVSS {f.cvss.toFixed(1)}
-                                </span>
-                              )}
-
-                              {f.quick_win && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                  <Zap className="w-3 h-3" /> Quick Win
-                                </span>
-                              )}
-
-                              <span className="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                                {f.component}
-                              </span>
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase shrink-0 mt-0.5 ${
+                                f.severity.toUpperCase() === "CRITICAL"
+                                  ? "bg-rose-500/10 text-rose-600 border border-rose-500/30 dark:bg-rose-950/60 dark:text-rose-400"
+                                  : f.severity.toUpperCase() === "HIGH"
+                                  ? "bg-orange-500/10 text-orange-600 border border-orange-500/30 dark:bg-orange-950/60 dark:text-orange-400"
+                                  : f.severity.toUpperCase() === "MEDIUM"
+                                  ? "bg-amber-500/10 text-amber-600 border border-amber-500/30 dark:bg-amber-950/60 dark:text-amber-400"
+                                  : "bg-blue-500/10 text-blue-600 border border-blue-500/30 dark:bg-blue-950/60 dark:text-blue-400"
+                              }`}
+                            >
+                              {f.severity}
+                            </span>
+                            <div className="space-y-1">
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                {f.title}
+                              </h4>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                <span>Component: <code className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[11px]">{f.component}</code></span>
+                                {f.cvss > 0 && <span>· CVSS: <strong>{f.cvss}</strong></span>}
+                                {f.quick_win && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                    <Zap className="w-3 h-3" /> Quick Win
+                                  </span>
+                                )}
+                              </div>
                             </div>
-
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 pt-1">
-                              {f.title}
-                            </h4>
                           </div>
-
-                          <button className="p-1 text-slate-400 hover:text-slate-600">
+                          <button className="text-slate-400 hover:text-slate-600 p-1">
                             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </button>
                         </div>
 
                         {isExpanded && (
-                          <div className="p-5 border-t border-slate-200 dark:border-slate-800 space-y-4 text-xs bg-white dark:bg-slate-900">
-                            <div className="space-y-1">
-                              <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">
-                                Vulnerability Details:
-                              </span>
-                              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                                {f.description}
-                              </p>
+                          <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 space-y-3 text-xs text-slate-700 dark:text-slate-300">
+                            <div>
+                              <strong className="text-slate-900 dark:text-slate-100 block mb-1">
+                                Risk Description:
+                              </strong>
+                              <p className="leading-relaxed whitespace-pre-line">{f.description}</p>
                             </div>
-
-                            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                              <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
-                                <Wrench className="w-3.5 h-3.5" />
-                                Actionable Remediation:
-                              </span>
-                              <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-mono whitespace-pre-line text-[11px]">
+                            <div className="bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3.5 space-y-1.5">
+                              <strong className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                                <Wrench className="w-3.5 h-3.5" /> Actionable Remediation:
+                              </strong>
+                              <p className="leading-relaxed whitespace-pre-line font-mono text-[11px] text-slate-800 dark:text-slate-200">
                                 {f.remediation}
                               </p>
                             </div>
@@ -777,54 +855,56 @@ function SecurityContent() {
               )}
             </div>
 
-            {/* 4. Dependency Report Table */}
+            {/* 4. Dependency Security Audit Table */}
             {currentScan.dependency_report && currentScan.dependency_report.length > 0 && (
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <Package className="w-5 h-5 text-indigo-600" />
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                      Dependency Audit Report
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Evaluated packages, lockfiles, known CVE advisories, and upgrade recommendations.
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <Package className="w-4 h-4 text-indigo-600" />
+                    Dependency &amp; Manifest Audit
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Known CVEs, outdated lockfile components, and unmaintained package trust signals.
+                  </p>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                         <th className="p-3">Package</th>
-                        <th className="p-3">Version</th>
+                        <th className="p-3">Current Version</th>
                         <th className="p-3">Status</th>
-                        <th className="p-3">Known Issues</th>
+                        <th className="p-3">Known Issues / CVEs</th>
                         <th className="p-3">Recommendation</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                       {currentScan.dependency_report.map((dep, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                          <td className="p-3 font-bold text-slate-900 dark:text-slate-100 font-mono">
+                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="p-3 font-bold font-mono text-slate-900 dark:text-slate-100">
                             {dep.package}
                           </td>
                           <td className="p-3 font-mono text-slate-500">{dep.version}</td>
                           <td className="p-3">
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                dep.status === "Secure"
-                                  ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
-                                  : dep.status === "Outdated"
-                                  ? "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300"
-                                  : "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300"
+                              className={`px-2 py-0.5 rounded-md font-bold text-[10px] uppercase ${
+                                dep.status.toLowerCase() === "vulnerable"
+                                  ? "bg-rose-500/10 text-rose-600"
+                                  : dep.status.toLowerCase() === "outdated"
+                                  ? "bg-amber-500/10 text-amber-600"
+                                  : dep.status.toLowerCase() === "unmaintained"
+                                  ? "bg-orange-500/10 text-orange-600"
+                                  : "bg-emerald-500/10 text-emerald-600"
                               }`}
                             >
                               {dep.status}
                             </span>
                           </td>
-                          <td className="p-3 text-slate-500">{dep.known_issues || "None known"}</td>
-                          <td className="p-3 font-medium text-indigo-600 dark:text-indigo-400">
+                          <td className="p-3 text-slate-600 dark:text-slate-400">
+                            {dep.known_issues || "None known"}
+                          </td>
+                          <td className="p-3 text-slate-900 dark:text-slate-200 font-medium">
                             {dep.recommendation || "Up to date"}
                           </td>
                         </tr>
@@ -835,26 +915,30 @@ function SecurityContent() {
               </div>
             )}
 
-            {/* 5. Remediation Roadmap & Recommended Tools */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Remediation Roadmap */}
-              {currentScan.remediation_roadmap && (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
+            {/* 5. Remediation Roadmap */}
+            {currentScan.remediation_roadmap && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+                <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-500" />
-                    Remediation Roadmap
+                    <Wrench className="w-4 h-4 text-indigo-600" />
+                    Actionable Remediation Roadmap
                   </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Step-by-step mitigation actions organized by immediate fixes and architectural hardening.
+                  </p>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
                   {currentScan.remediation_roadmap.quick_wins?.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        Quick Wins (Fix in &lt; 1 Hour):
+                    <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-3">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5" /> Quick Wins (Fix in &lt; 1 Hour)
                       </span>
-                      <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                      <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
                         {currentScan.remediation_roadmap.quick_wins.map((qw, i) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                            <span>{qw}</span>
+                          <li key={i} className="flex items-start gap-2.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                            <span className="leading-relaxed">{qw}</span>
                           </li>
                         ))}
                       </ul>
@@ -862,48 +946,23 @@ function SecurityContent() {
                   )}
 
                   {currentScan.remediation_roadmap.long_term?.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                        Long-Term Security Hardening:
+                    <div className="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 space-y-3">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5" /> Long-Term Security Hardening
                       </span>
-                      <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                      <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
                         {currentScan.remediation_roadmap.long_term.map((lt, i) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
-                            <span>{lt}</span>
+                          <li key={i} className="flex items-start gap-2.5">
+                            <span className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
+                            <span className="leading-relaxed">{lt}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* Recommended Monitoring Tools */}
-              {currentScan.recommended_tools && currentScan.recommended_tools.length > 0 && (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-600" />
-                    Recommended Security Tools
-                  </h3>
-                  <div className="space-y-3">
-                    {currentScan.recommended_tools.map((tool, i) => (
-                      <div
-                        key={i}
-                        className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1"
-                      >
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
-                          {tool.name}
-                        </span>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                          {tool.purpose}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* 6. Past Scan History Table */}
             {scansHistory.length > 0 && (
@@ -916,6 +975,7 @@ function SecurityContent() {
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                         <th className="p-3">Repository</th>
+                        <th className="p-3">Branch</th>
                         <th className="p-3">Score &amp; Grade</th>
                         <th className="p-3">Critical / High</th>
                         <th className="p-3">Date</th>
@@ -933,6 +993,12 @@ function SecurityContent() {
                         >
                           <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
                             {s.repo_name}
+                          </td>
+                          <td className="p-3">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              <GitBranch className="w-3 h-3 text-indigo-500" />
+                              {s.branch || "main"}
+                            </span>
                           </td>
                           <td className="p-3">
                             <span

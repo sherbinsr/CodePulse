@@ -13,10 +13,10 @@ import {
 import {
   getRepoStats, getDocumentationRepos, getRepoProjects, createRepoProject,
   updateRepoProject, deleteRepoProject, getRepoProjectBoard, createProjectTask,
-  updateProjectTask, deleteProjectTask, getDeveloperStats, getIssueTimelineDetails, addIssueComment, triggerSync
+  updateProjectTask, deleteProjectTask, getDeveloperStats, triggerSync
 } from "@/lib/api";
 import type {
-  RepoStat, RepoProject, ProjectTask, RepoProjectBoard, ProjectColumnOption, DeveloperStat, IssueTimelineDetails
+  RepoStat, RepoProject, ProjectTask, RepoProjectBoard, ProjectColumnOption, DeveloperStat
 } from "@/types";
 import { MarkdownViewer } from "@/components/documentation/markdown-viewer";
 import { cn } from "@/lib/utils";
@@ -79,15 +79,11 @@ export default function ProjectsPage() {
   const [customAssigneeInput, setCustomAssigneeInput] = useState("");
   const [creatingTask, setCreatingTask] = useState(false);
 
-  // Selected Task Drawer & Linked Timeline Details
+  // Selected Task Drawer
   const [activeTask, setActiveTask] = useState<ProjectTask | null>(null);
   const [editingTaskTitle, setEditingTaskTitle] = useState("");
   const [editingTaskDesc, setEditingTaskDesc] = useState("");
   const [isEditingTask, setIsEditingTask] = useState(false);
-  const [taskDetails, setTaskDetails] = useState<IssueTimelineDetails | null>(null);
-  const [loadingTaskDetails, setLoadingTaskDetails] = useState(false);
-  const [newCommentText, setNewCommentText] = useState("");
-  const [postingComment, setPostingComment] = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -95,7 +91,7 @@ export default function ProjectsPage() {
   const [draggedCardId, setDraggedCardId] = useState<number | null>(null);
   const [dragOverColName, setDragOverColName] = useState<string | null>(null);
 
-  // Manual Refresh for PRs, Issues & Board
+  // Manual Refresh for Board
   const handleRefreshAll = async () => {
     setIsRefreshing(true);
     try {
@@ -107,14 +103,6 @@ export default function ProjectsPage() {
       }
       if (selectedRepoProjectId) {
         await fetchRepoBoard(selectedRepoProjectId);
-      }
-      if (activeTask && activeTask.issue) {
-        const details = await getIssueTimelineDetails(
-          activeTask.issue.owner,
-          activeTask.issue.repo_name,
-          activeTask.issue.number
-        );
-        setTaskDetails(details);
       }
     } catch (err) {
       console.error("Refresh failed:", err);
@@ -206,19 +194,6 @@ export default function ProjectsPage() {
       fetchRepoBoard(selectedRepoProjectId);
     }
   }, [selectedRepoProjectId]);
-
-  // Fetch Linked PRs and Timeline details when activeTask is opened
-  useEffect(() => {
-    if (activeTask && activeTask.issue) {
-      setLoadingTaskDetails(true);
-      getIssueTimelineDetails(activeTask.issue.owner, activeTask.issue.repo_name, activeTask.issue.number)
-        .then((data) => setTaskDetails(data))
-        .catch(() => setTaskDetails(null))
-        .finally(() => setLoadingTaskDetails(false));
-    } else {
-      setTaskDetails(null);
-    }
-  }, [activeTask]);
 
   // Toggle Label Selection
   const handleToggleLabel = (labelName: string) => {
@@ -393,31 +368,6 @@ export default function ProjectsPage() {
       if (selectedRepoProjectId) fetchRepoBoard(selectedRepoProjectId);
     } catch (err: any) {
       alert("Failed to delete task: " + (err?.response?.data?.detail || err.message));
-    }
-  };
-
-  // Handle Post Comment
-  const handlePostComment = async () => {
-    if (!activeTask || !activeTask.issue || !newCommentText.trim()) return;
-    setPostingComment(true);
-    try {
-      await addIssueComment(
-        activeTask.issue.owner,
-        activeTask.issue.repo_name,
-        activeTask.issue.number,
-        newCommentText
-      );
-      setNewCommentText("");
-      const details = await getIssueTimelineDetails(
-        activeTask.issue.owner,
-        activeTask.issue.repo_name,
-        activeTask.issue.number
-      );
-      setTaskDetails(details);
-    } catch (err: any) {
-      alert("Failed to post comment: " + (err?.response?.data?.detail || err.message));
-    } finally {
-      setPostingComment(false);
     }
   };
 
@@ -761,9 +711,9 @@ export default function ProjectsPage() {
                           </div>
                         )}
 
-                        {/* Footer with Linked Issue & PR Badge */}
+                        {/* Footer with Assignees */}
                         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 w-full">
-                          <div className="flex items-center gap-1 min-w-0 max-w-[60%]">
+                          <div className="flex items-center gap-1 min-w-0">
                             {task.assignees.length > 0 ? (
                               task.assignees.map((a) => (
                                 <span key={a.login} className="font-semibold text-slate-700 dark:text-slate-300 truncate text-[11px]" title={`@${a.login}`}>
@@ -774,18 +724,6 @@ export default function ProjectsPage() {
                               <span className="text-[10px] italic">Unassigned</span>
                             )}
                           </div>
-
-                          {task.issue && (
-                            <div className="flex items-center gap-1 shrink-0 ml-auto">
-                              <span className="text-[10px] font-mono font-bold text-indigo-500">
-                                #{task.issue.number}
-                              </span>
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-0.5">
-                                <GitPullRequest className="w-2.5 h-2.5" />
-                                PR
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     );
@@ -1200,73 +1138,23 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            {/* ASSOCIATED PULL REQUESTS SECTION */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <GitPullRequest className="w-4 h-4 text-purple-500" />
-                  Associated Pull Requests
-                  {taskDetails?.linked_prs && taskDetails.linked_prs.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-extrabold text-[10px]">
-                      {taskDetails.linked_prs.length}
-                    </span>
-                  )}
-                </span>
-
-                <button
-                  onClick={handleRefreshAll}
-                  disabled={isRefreshing || loadingTaskDetails}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-100 transition-colors disabled:opacity-50"
-                  title="Refresh pull request timeline from GitHub"
-                >
-                  <RefreshCw className={cn("w-3 h-3", (isRefreshing || loadingTaskDetails) && "animate-spin")} />
-                  <span>Refresh PRs</span>
-                </button>
-              </div>
-
-              {loadingTaskDetails ? (
-                <div className="p-4 text-center text-xs text-slate-400">Fetching linked PRs...</div>
-              ) : taskDetails && taskDetails.linked_prs.length > 0 ? (
-                <div className="space-y-2">
-                  {taskDetails.linked_prs.map((pr) => (
-                    <div key={pr.url} className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
-                          <GitPullRequest className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-slate-900 dark:text-white">{pr.title}</span>
-                            <span className="font-mono text-[10px] font-extrabold text-indigo-500">#{pr.number}</span>
-                          </div>
-                          <span className={cn(
-                            "inline-block text-[9px] font-black uppercase px-2 py-0.2 rounded-full mt-1",
-                            pr.state.toLowerCase() === "merged"
-                              ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
-                              : pr.state.toLowerCase() === "open"
-                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                              : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                          )}>
-                            {pr.state}
-                          </span>
-                        </div>
-                      </div>
-
-                      <a
-                        href={pr.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 dark:hover:bg-slate-800"
-                        title="Open PR on GitHub"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
+            {/* Description */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Task Description</span>
+              {isEditingTask ? (
+                <textarea
+                  value={editingTaskDesc}
+                  onChange={(e) => setEditingTaskDesc(e.target.value)}
+                  rows={6}
+                  className="w-full p-3 text-xs bg-slate-950 text-white rounded-xl border border-slate-800 font-mono"
+                />
               ) : (
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400 italic text-center">
-                  {activeTask?.issue ? "No pull requests cross-referenced with this issue." : "Link this task to a GitHub Issue to track associated PRs."}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border">
+                  {activeTask.description ? (
+                    <MarkdownViewer content={activeTask.description} />
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">No description set.</span>
+                  )}
                 </div>
               )}
             </div>
@@ -1321,73 +1209,6 @@ export default function ProjectsPage() {
                 })}
               </div>
             </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Task Description</span>
-              {isEditingTask ? (
-                <textarea
-                  value={editingTaskDesc}
-                  onChange={(e) => setEditingTaskDesc(e.target.value)}
-                  rows={6}
-                  className="w-full p-3 text-xs bg-slate-950 text-white rounded-xl border border-slate-800 font-mono"
-                />
-              ) : (
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border">
-                  {activeTask.description ? (
-                    <MarkdownViewer content={activeTask.description} />
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">No description set.</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ISSUE COMMENTS FEED */}
-            {activeTask.issue && (
-              <div className="space-y-3 pt-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <MessageSquare className="w-4 h-4 text-indigo-500" />
-                  GitHub Comments ({taskDetails?.comments?.length || 0})
-                </span>
-
-                {taskDetails?.comments && taskDetails.comments.length > 0 && (
-                  <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                    {taskDetails.comments.map((comment) => (
-                      <div key={comment.id} className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <img src={comment.user.avatar_url || `https://github.com/${comment.user.login}.png`} className="w-4 h-4 rounded-full" />
-                            <span className="font-bold text-slate-900 dark:text-white">@{comment.user.login}</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400">{new Date(comment.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">{comment.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add Comment Box */}
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="text"
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    placeholder="Leave a comment on GitHub issue..."
-                    className="flex-1 px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
-                  />
-                  <button
-                    onClick={handlePostComment}
-                    disabled={postingComment || !newCommentText.trim()}
-                    className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl disabled:opacity-50"
-                    title="Post Comment"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
               <button onClick={() => handleDeleteTask(activeTask.id)} className="text-xs font-bold text-rose-600 hover:underline">

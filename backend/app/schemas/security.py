@@ -1,7 +1,19 @@
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
+
+
+class BranchOption(BaseModel):
+    name: str
+    protected: bool = False
+    commit_sha: Optional[str] = None
+
+
+class RepoBranchesResponse(BaseModel):
+    repo_name: str
+    default_branch: str = "main"
+    branches: list[BranchOption] = []
 
 
 class VulnerabilityFinding(BaseModel):
@@ -23,18 +35,14 @@ class DependencyReportItem(BaseModel):
 
 
 class RemediationRoadmap(BaseModel):
-    quick_wins: List[str] = []
-    long_term: List[str] = []
-
-
-class RecommendedTool(BaseModel):
-    name: str
-    purpose: str
+    quick_wins: list[str] = []
+    long_term: list[str] = []
 
 
 class VulnerabilityScanRequest(BaseModel):
     org: str
     repo_name: str
+    branch: Optional[str] = "main"
     provider: str = "github"
     openai_api_key: Optional[str] = None
     model: Optional[str] = None
@@ -45,6 +53,7 @@ class VulnerabilityScanResponse(BaseModel):
     org: str
     repo_name: str
     repo_full_name: str
+    branch: Optional[str] = "main"
     provider: str
     security_score: int
     grade: str
@@ -54,10 +63,9 @@ class VulnerabilityScanResponse(BaseModel):
     low_count: int
     status: str
     executive_summary: Optional[str] = None
-    findings: List[VulnerabilityFinding] = []
-    dependency_report: List[DependencyReportItem] = []
+    findings: list[VulnerabilityFinding] = []
+    dependency_report: list[DependencyReportItem] = []
     remediation_roadmap: Optional[RemediationRoadmap] = None
-    recommended_tools: List[RecommendedTool] = []
     model_used: Optional[str] = None
     created_at: datetime
 
@@ -67,6 +75,7 @@ class VulnerabilityScanSummary(BaseModel):
     org: str
     repo_name: str
     repo_full_name: str
+    branch: Optional[str] = "main"
     provider: str
     security_score: int
     grade: str
@@ -86,4 +95,4 @@ class OrgSecuritySummary(BaseModel):
     total_high: int
     total_medium: int
     total_low: int
-    recent_scans: List[VulnerabilityScanSummary] = []
+    recent_scans: list[VulnerabilityScanSummary] = []

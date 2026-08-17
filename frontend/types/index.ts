@@ -233,76 +233,9 @@ export interface IssueLabel {
   color?: string | null;
 }
 
-export interface GitHubIssue {
-  id: number;
-  github_id: string;
-  number: number;
-  repo_name: string;
-  owner: string;
-  title: string;
-  body?: string | null;
-  state: "open" | "closed";
-  author_login: string;
-  author_avatar?: string | null;
-  assignees: Assignee[];
-  labels: IssueLabel[];
-  milestone?: string | null;
-  priority?: string | null;
-  comments_count: number;
-  created_at: string;
-  updated_at: string;
-  closed_at?: string | null;
-}
-
-export interface ProjectItem {
-  id: number;
-  github_id: string;
-  status: string;
-  status_option_id?: string | null;
-  position: number;
-  issue: GitHubIssue;
-}
-
 export interface ProjectColumnOption {
   id: string;
   name: string;
-}
-
-export interface ProjectV2 {
-  id: number;
-  github_id: string;
-  org: string;
-  title: string;
-  number: number;
-  url?: string | null;
-  closed: boolean;
-  status_field_id?: string | null;
-  columns: ProjectColumnOption[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProjectBoard {
-  project: ProjectV2;
-  items: ProjectItem[];
-}
-
-export interface IssueComment {
-  id: number;
-  body: string;
-  user: {
-    login: string;
-    avatar_url?: string | null;
-  };
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IssueTimelineDetails {
-  comments: IssueComment[];
-  linked_prs: Array<{ title: string; number: number; url: string; state: string }>;
-  commits: Array<{ sha: string; url: string }>;
-  timeline_events_count: number;
 }
 
 export interface RepoProject {
@@ -323,7 +256,6 @@ export interface RepoProject {
 export interface ProjectTask {
   id: number;
   project_id: number;
-  issue_id?: number | null;
   ticket_key?: string | null;
   title: string;
   description?: string | null;
@@ -334,11 +266,9 @@ export interface ProjectTask {
   story_points: number;
   due_date?: string | null;
   position: number;
-  issue?: GitHubIssue | null;
   created_at: string;
   updated_at: string;
 }
-
 
 export interface RepoProjectBoard {
   project: RepoProject;
@@ -374,9 +304,16 @@ export interface RemediationRoadmap {
   long_term: string[];
 }
 
-export interface RecommendedTool {
+export interface RepoBranch {
   name: string;
-  purpose: string;
+  protected?: boolean;
+  commit_sha?: string | null;
+}
+
+export interface RepoBranchesResponse {
+  repo_name: string;
+  default_branch: string;
+  branches: RepoBranch[];
 }
 
 export interface VulnerabilityScan {
@@ -384,6 +321,7 @@ export interface VulnerabilityScan {
   org: string;
   repo_name: string;
   repo_full_name: string;
+  branch?: string | null;
   provider: "github" | "gitlab";
   security_score: number;
   grade: "A" | "B" | "C" | "D" | "F";
@@ -396,7 +334,6 @@ export interface VulnerabilityScan {
   findings: VulnerabilityFinding[];
   dependency_report: DependencyReportItem[];
   remediation_roadmap: RemediationRoadmap | null;
-  recommended_tools: RecommendedTool[];
   model_used: string | null;
   created_at: string;
 }
@@ -406,6 +343,7 @@ export interface VulnerabilityScanSummary {
   org: string;
   repo_name: string;
   repo_full_name: string;
+  branch?: string | null;
   provider: "github" | "gitlab";
   security_score: number;
   grade: "A" | "B" | "C" | "D" | "F";

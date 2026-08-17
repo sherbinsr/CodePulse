@@ -839,6 +839,22 @@ class GitHubService:
             logger.warning("Failed to fetch timeline for issue %s/%s#%d: %s", owner, repo, issue_number, e)
             return []
 
+    async def get_repo_branches(self, owner: str, repo: str) -> list[dict]:
+        """Fetch all branches for a repository from GitHub REST API."""
+        try:
+            branches = await self._rest_get_paginated(f"/repos/{owner}/{repo}/branches")
+            return [
+                {
+                    "name": b["name"],
+                    "protected": b.get("protected", False),
+                    "commit_sha": b.get("commit", {}).get("sha"),
+                }
+                for b in branches
+            ]
+        except Exception as e:
+            logger.warning("Failed to fetch branches for %s/%s: %s", owner, repo, e)
+            return []
+
     async def get_repo_issues(self, owner: str, repo: str, state: str = "all") -> list[dict]:
         """Fetch all issues for a repository from GitHub REST API."""
         try:

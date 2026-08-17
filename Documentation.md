@@ -81,13 +81,11 @@ GitAudit uses a relational model in PostgreSQL designed for low latency queries,
 ```mermaid
 erDiagram
     users ||--o{ custom_organizations : "manages"
+    users ||--o{ vulnerability_scans : "initiates"
     repositories ||--o{ documentations : "contains"
     repositories ||--o{ pull_requests : "has"
     repositories ||--o{ repo_projects : "owns"
     pull_requests ||--o{ pr_reviews : "has"
-    github_projects ||--o{ github_project_items : "contains"
-    github_issues ||--o{ github_project_items : "linked_to"
-    github_issues ||--o{ project_tasks : "linked_to"
     repo_projects ||--o{ project_tasks : "contains"
 
     users {
@@ -100,7 +98,10 @@ erDiagram
         string avatar_url
         string github_token
         string gitlab_token
+        string openai_api_key
+        string openai_model
         datetime created_at
+        datetime updated_at
     }
 
     repositories {
@@ -114,6 +115,7 @@ erDiagram
         int stars
         int forks
         datetime synced_at
+        datetime created_at
     }
 
     documentations {
@@ -125,6 +127,7 @@ erDiagram
         string s3_key
         string s3_url
         text content
+        string source
         datetime created_at
         datetime updated_at
     }
@@ -155,12 +158,12 @@ erDiagram
         string status
         text columns_json
         datetime created_at
+        datetime updated_at
     }
 
     project_tasks {
         int id PK
         int project_id FK
-        int issue_id FK
         string ticket_key
         string title
         text description
@@ -170,6 +173,26 @@ erDiagram
         text labels_json
         int story_points
         datetime created_at
+        datetime updated_at
+    }
+
+    vulnerability_scans {
+        int id PK
+        string org
+        string repo_name
+        string repo_full_name
+        string provider
+        int security_score
+        string grade
+        int critical_count
+        int high_count
+        int medium_count
+        int low_count
+        string status
+        text findings
+        text dependency_report
+        text remediation_roadmap
+        datetime created_at
     }
 ```
 
@@ -177,13 +200,16 @@ erDiagram
 
 | Model | Table Name | Purpose |
 | :--- | :--- | :--- |
-| `User` | `users` | Stores authenticated user credentials, OAuth tokens (GitHub/GitLab), and user profile data. |
+| `User` | `users` | Stores authenticated user credentials, OAuth tokens (GitHub/GitLab), OpenAI API key & model preferences. |
 | `Repository` | `repositories` | Central entity representing tracked repositories (name, owner, provider, language, stars, forks). |
-| `Documentation` | `documentations` | Tracks architecture documents, API specs, guides, uploaded PDFs, Word docs (`.doc`/`.docx`), and Markdown files linked to a repository. Stores binary file references in AWS S3 and plain text in DB. |
-| `PullRequest` | `pull_requests` | Stores PR metadata, cycle times (time to first review, time to merge), and status (OPEN, MERGED, CLOSED). |
+| `Documentation` | `documentations` | Tracks architecture documents, API specs, guides, uploaded PDFs, Word docs, and Markdown files linked to a repository. Stores binary files in S3 and text in DB. |
+| `PullRequest` | `pull_requests` | Stores PR metadata, cycle times (time to first review, time to merge), CI workflow action summaries, and status (OPEN, MERGED, CLOSED). |
 | `PRReview` | `pr_reviews` | Tracks code reviews, reviewer logins, review states (APPROVED, CHANGES_REQUESTED), and review latency. |
-| `RepoProject` | `repo_projects` | Built-in Kanban project boards created for a specific repository (stores custom columns, ticket key prefixes like `APP`, `CHAT`). |
-| `ProjectTask` | `project_tasks` | Individual tasks, user stories, or bugs on a repository Kanban board with story points, assignees, labels, and linked GitHub Issues. |
+| `RepoProject` | `repo_projects` | Built-in Kanban project boards created for a specific repository (stores custom columns, ticket key prefixes like `SSA`, `ENG`). |
+| `ProjectTask` | `project_tasks` | Individual tasks, user stories, or bugs on a repository Kanban board with story points, assignees, labels, and ticket keys. |
+| `VulnerabilityScan` | `vulnerability_scans` | Stores AI-driven repository security assessments, dependency CVEs, config review, security scores (0-100), and remediation roadmaps. |
+| `Commit` | `commits` | Stores commit metadata, authors, and timestamps for velocity and churn tracking. |
+| `WorkflowRun` | `workflow_runs` | Tracks CI/CD pipeline runs, run durations, conclusions (success/failure), and flaky workflow analytics. |
 | `CustomOrganization` | `custom_organizations` | Allows users to track additional GitHub/GitLab organizations or user accounts. |
 | `SyncJob` | `sync_jobs` | Logs background synchronization status, execution times, and errors. |
 

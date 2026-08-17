@@ -200,6 +200,24 @@ class GitLabService:
     def map_mr_state(state: str) -> str:
         return _STATE_MAP.get(state, "CLOSED")
 
+    async def get_project_branches(self, project_id_or_path: str) -> list[dict]:
+        """Fetch all branches for a GitLab project."""
+        import urllib.parse
+        encoded = urllib.parse.quote(project_id_or_path, safe="")
+        try:
+            branches = await self._get_paginated(f"/projects/{encoded}/repository/branches")
+            return [
+                {
+                    "name": b["name"],
+                    "protected": b.get("protected", False),
+                    "commit_sha": b.get("commit", {}).get("id"),
+                }
+                for b in branches
+            ]
+        except Exception as e:
+            logger.warning("Failed to fetch gitlab branches for %s: %s", project_id_or_path, e)
+            return []
+
     @staticmethod
     def pipeline_conclusion(status: str) -> str:
         return _CONCLUSION_MAP.get(status, "failure")

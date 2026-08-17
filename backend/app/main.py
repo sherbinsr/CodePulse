@@ -18,7 +18,6 @@ from app.routers import (
     settings_router,
 )
 
-
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,

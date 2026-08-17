@@ -67,6 +67,15 @@ async def init_db():
             except Exception:
                 pass
 
+        # Auto-migrate vulnerability_scans table branch column
+        try:
+            await conn.execute(text("ALTER TABLE vulnerability_scans ADD COLUMN IF NOT EXISTS branch VARCHAR(255) DEFAULT 'main'"))
+        except Exception:
+            try:
+                await conn.execute(text("ALTER TABLE vulnerability_scans ADD COLUMN branch VARCHAR(255) DEFAULT 'main'"))
+            except Exception:
+                pass
+
         # Auto-migrate pull_requests table columns
         pr_cols = [
             ("body", "TEXT"),
@@ -85,5 +94,26 @@ async def init_db():
                     await conn.execute(text(f"ALTER TABLE pull_requests ADD COLUMN {col} {col_type}"))
                 except Exception:
                     pass
+
+        # Drop legacy tables if they exist
+        try:
+            await conn.execute(text("DROP TABLE IF EXISTS github_project_items CASCADE"))
+            await conn.execute(text("DROP TABLE IF EXISTS github_projects CASCADE"))
+            await conn.execute(text("DROP TABLE IF EXISTS github_issues CASCADE"))
+        except Exception:
+            pass
+
+        # Drop legacy issue_id column from project_tasks if it exists
+        try:
+            await conn.execute(text("ALTER TABLE project_tasks DROP COLUMN IF EXISTS issue_id"))
+        except Exception:
+            pass
+
+        # Drop recommended_tools from vulnerability_scans if it exists
+        try:
+            await conn.execute(text("ALTER TABLE vulnerability_scans DROP COLUMN IF EXISTS recommended_tools"))
+        except Exception:
+            pass
+
 
 

@@ -8,7 +8,6 @@ from app.schemas.analytics import (
 from app.schemas.auth import AuthCallbackRequest, AuthResponse, UserOut
 from app.schemas.organization import OrgOut, SyncStatusOut, SyncTriggerResponse
 from app.schemas.pull_request import PRListResponse, PullRequestOut
-
 from app.schemas.security import (
     OrgSecuritySummary,
     VulnerabilityFinding,

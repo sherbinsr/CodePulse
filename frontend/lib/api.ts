@@ -3,9 +3,10 @@ import type {
   OrgOverview, DeveloperStat, RepoStat, MonthlyTrend,
   ReviewNetwork, PullRequest, Org, SyncStatus, User, DigestData,
   CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
-  Documentation, RepositoryWithDocs, GitHubRelease, ProjectV2, ProjectBoard, ProjectItem,
-  GitHubIssue, IssueTimelineDetails, RepoProject, ProjectTask, RepoProjectBoard,
+  Documentation, RepositoryWithDocs, GitHubRelease,
+  RepoProject, ProjectTask, RepoProjectBoard,
   UserSettings, VulnerabilityScan, VulnerabilityScanSummary, OrgSecuritySummary,
+  RepoBranchesResponse,
 } from "@/types";
 
 
@@ -223,101 +224,6 @@ export const fetchAllRepoDocsFolder = async (
   return data;
 };
 
-// GitHub Projects v2 & Issues
-export const getProjects = async (
-  org: string,
-  provider: "github" | "gitlab" = "github"
-): Promise<ProjectV2[]> => {
-  const { data } = await api.get(`/api/projects?org=${org}&provider=${provider}`);
-  return data;
-};
-
-export const importProjectByNumber = async (
-  org: string,
-  projectNumber: number
-): Promise<ProjectV2> => {
-  const { data } = await api.post(`/api/projects/import-by-number?org=${org}&project_number=${projectNumber}`);
-  return data;
-};
-
-
-export const getProjectBoard = async (projectId: number): Promise<ProjectBoard> => {
-  const { data } = await api.get(`/api/projects/${projectId}/board`);
-  return data;
-};
-
-export const updateProjectItemStatus = async (
-  projectId: number,
-  itemId: number,
-  payload: { status: string; status_option_id?: string | null; field_id?: string | null }
-): Promise<{ message: string; old_status: string; new_status: string }> => {
-  const { data } = await api.post(`/api/projects/${projectId}/items/${itemId}/status`, payload);
-  return data;
-};
-
-export const createProjectIssue = async (
-  projectId: number,
-  payload: {
-    repo_name: string;
-    owner: string;
-    title: string;
-    body?: string;
-    assignees?: string[];
-    labels?: string[];
-    milestone?: number;
-    priority?: string;
-  }
-): Promise<ProjectItem> => {
-  const { data } = await api.post(`/api/projects/${projectId}/issues`, payload);
-  return data;
-};
-
-export const updateProjectIssue = async (
-  issueId: number,
-  payload: {
-    title?: string;
-    body?: string;
-    state?: string;
-    assignees?: string[];
-    labels?: string[];
-  }
-): Promise<GitHubIssue> => {
-  const { data } = await api.put(`/api/projects/issues/${issueId}`, payload);
-  return data;
-};
-
-export const getIssueTimelineDetails = async (
-  owner: string,
-  repo: string,
-  issueNumber: number
-): Promise<IssueTimelineDetails> => {
-
-  const { data } = await api.get(`/api/projects/issues/${owner}/${repo}/${issueNumber}/details`);
-  return data;
-};
-
-export const addIssueComment = async (
-  owner: string,
-  repo: string,
-  issueNumber: number,
-  body: string
-): Promise<any> => {
-  const { data } = await api.post(`/api/projects/issues/${owner}/${repo}/${issueNumber}/comments`, { body });
-  return data;
-};
-
-export const bulkUpdateProjectIssues = async (payload: {
-  issue_ids: number[];
-  status?: string;
-  status_option_id?: string;
-  state?: string;
-  assignees?: string[];
-  labels?: string[];
-}): Promise<{ updated: number; message: string }> => {
-  const { data } = await api.post("/api/projects/bulk-update", payload);
-  return data;
-};
-
 // Built-in Repository Projects & Tasks API
 export const getRepoProjects = async (org: string, repoName: string): Promise<RepoProject[]> => {
   const { data } = await api.get(`/api/projects/repos/${org}/${repoName}`);
@@ -414,9 +320,21 @@ export const verifyOpenAIKey = async (
 };
 
 // Security & Vulnerability Assessment
+export const getRepoBranches = async (
+  org: string,
+  repoName: string,
+  provider: "github" | "gitlab" = "github"
+): Promise<RepoBranchesResponse> => {
+  const { data } = await api.get(
+    `/api/security/repos/${encodeURIComponent(org)}/${encodeURIComponent(repoName)}/branches?provider=${provider}`
+  );
+  return data;
+};
+
 export const runVulnerabilityScan = async (payload: {
   org: string;
   repo_name: string;
+  branch?: string;
   provider?: string;
   openai_api_key?: string;
   model?: string;

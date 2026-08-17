@@ -7,7 +7,6 @@ from app.models.user import User
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.pr_repository import PRRepository
 from app.repositories.repo_repository import RepoRepository
-from app.services.github_service import GitHubService
 from app.schemas.analytics import (
     BuildTrendOut,
     CISummaryOut,
@@ -24,6 +23,7 @@ from app.schemas.analytics import (
     ReviewNetworkOut,
 )
 from app.schemas.pull_request import PRListResponse, PullRequestOut
+from app.services.github_service import GitHubService
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +194,7 @@ class AnalyticsService:
             action_name = pr.action_name or (
                 "CI Build & Test Pipeline" if pr.id % 2 == 0 else "PR Validation & Lint"
             )
-            
+
             # Determine action status
             act_status = pr.action_status
             if not act_status:

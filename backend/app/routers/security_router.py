@@ -1,7 +1,7 @@
 """Security Router: Run vulnerability assessments and query scan reports."""
 
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,7 @@ from app.models.user import User
 from app.routers.deps import get_current_user
 from app.schemas.security import (
     OrgSecuritySummary,
+    RepoBranchesResponse,
     VulnerabilityScanRequest,
     VulnerabilityScanResponse,
     VulnerabilityScanSummary,
@@ -21,23 +22,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/security", tags=["Security & Vulnerability Assessment"])
 
 
+@router.get("/repos/{org}/{repo_name}/branches", response_model=RepoBranchesResponse)
+async def get_repository_branches(
+    org: str,
+    repo_name: str,
+    provider: str = Query("github", pattern="^(github|gitlab)$"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch available branches for a repository to select for security assessment."""
+    svc = SecurityService(db)
+    return await svc.get_repo_branches(
+        org=org, repo_name=repo_name, provider=provider, user=current_user
+    )
+
+
 @router.post("/scan", response_model=VulnerabilityScanResponse)
 async def trigger_vulnerability_scan(
     payload: VulnerabilityScanRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Trigger an AI-driven vulnerability assessment for a repository."""
+    """Trigger an AI-driven vulnerability assessment for a repository on a specific branch."""
     logger.info(
-        "User %s triggered vulnerability scan for repo %s/%s",
+        "User %s triggered vulnerability scan for repo %s/%s on branch %s",
         current_user.login,
         payload.org,
         payload.repo_name,
+        payload.branch,
     )
     svc = SecurityService(db)
     scan = await svc.run_assessment(
         org=payload.org,
         repo_name=payload.repo_name,
+        branch=payload.branch or "main",
         provider=payload.provider,
         user=current_user,
         custom_openai_key=payload.openai_api_key,
@@ -46,7 +64,7 @@ async def trigger_vulnerability_scan(
     return scan
 
 
-@router.get("/{org}/scans", response_model=List[VulnerabilityScanSummary])
+@router.get("/{org}/scans", response_model=list[VulnerabilityScanSummary])
 async def list_vulnerability_scans(
     org: str,
     repo: Optional[str] = Query(None),

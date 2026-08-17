@@ -17,7 +17,9 @@ router = APIRouter(prefix="/orgs", tags=["Organizations"])
 
 
 from sqlalchemy import delete, select
+
 from app.models.organization import CustomOrganization
+
 
 @router.get("", response_model=list[OrgOut])
 async def list_orgs(

@@ -1,9 +1,8 @@
-import base64
 import logging
 import mimetypes
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload

@@ -32,7 +32,7 @@ export function getGitHubOAuthUrl(): string {
   const redirectUri = encodeURIComponent(
     typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : ""
   );
-  const scope = encodeURIComponent("read:org read:user user:email read:project");
+  const scope = encodeURIComponent("read:org read:user user:email");
   return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 }
 

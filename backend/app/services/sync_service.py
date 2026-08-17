@@ -1,6 +1,5 @@
 """Orchestrates the background sync for GitHub and GitLab."""
 
-import json
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -8,9 +7,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.project import GitHubIssue, GitHubProject
 from app.models.repository import Repository
-
 from app.repositories.ci_repository import CIRepository
 from app.repositories.commit_repository import CommitRepository
 from app.repositories.pr_repository import PRRepository
@@ -36,14 +33,14 @@ class SyncService:
         self.db = db
         self.pr_repo = PRRepository(db)
         self.repo_repo = RepoRepository(db)
-        self.sync_repo = SyncRepository(db)
         self.ci_repo = CIRepository(db)
         self.commit_repo = CommitRepository(db)
+        self.sync_repo = SyncRepository(db)
 
     async def run(self, org: str, token: str, job_id: int, provider: str = "github") -> None:
-        logger.info("Sync job %d started for org: %s provider: %s", job_id, org, provider)
+        """Run the full sync for an org, marking the job started then completed or failed."""
+        logger.info("Starting sync job %d for %s org: %s", job_id, provider, org)
         await self.sync_repo.update_status(job_id, "running")
-
         try:
             if provider == "gitlab":
                 await self._run_gitlab(org, token, job_id)
@@ -61,38 +58,6 @@ class SyncService:
         gh = GitHubService(token)
         repos_synced = 0
         prs_synced = 0
-
-        # Sync GitHub Projects V2 for the org / user account
-        try:
-            gh_projects = await gh.get_org_projects_v2(org)
-            for gp in gh_projects:
-                fields = gp.get("fields", {}).get("nodes", [])
-                status_field = next((f for f in fields if f.get("name") == "Status"), None)
-                fields_payload = {
-                    "status_field_id": status_field.get("id") if status_field else None,
-                    "columns": status_field.get("options", []) if status_field else [],
-                }
-                stmt_p = select(GitHubProject).where(GitHubProject.github_id == str(gp["id"]))
-                res_p = await self.db.execute(stmt_p)
-                existing_p = res_p.scalar_one_or_none()
-                if existing_p:
-                    existing_p.title = gp.get("title", existing_p.title)
-                    existing_p.closed = gp.get("closed", False)
-                    existing_p.fields_json = json.dumps(fields_payload)
-                else:
-                    new_proj = GitHubProject(
-                        github_id=str(gp["id"]),
-                        org=org,
-                        title=gp.get("title", ""),
-                        number=gp.get("number", 0),
-                        url=gp.get("url"),
-                        closed=gp.get("closed", False),
-                        fields_json=json.dumps(fields_payload),
-                    )
-                    self.db.add(new_proj)
-            await self.db.commit()
-        except Exception as exc:
-            logger.warning("GitHub Projects V2 sync failed for org %s (non-fatal): %s", org, exc)
 
         repo_nodes = await gh.fetch_org_repos_with_prs(org)
         logger.info("Sync job %d: processing %d repos for org: %s", job_id, len(repo_nodes), org)
@@ -233,44 +198,6 @@ class SyncService:
                     await self.commit_repo.bulk_insert(rows)
             except Exception as exc:
                 logger.error("Commit sync failed for %s (non-fatal): %s", full_name, exc)
-
-            try:
-                repo_name = node["name"]
-                issues_data = await gh.get_repo_issues(org, repo_name, state="all")
-                for gh_iss in issues_data:
-                    if "pull_request" in gh_iss:
-                        continue
-                    num = gh_iss.get("number")
-                    if not num:
-                        continue
-                    st = gh_iss.get("state", "open")
-                    node_id = str(gh_iss.get("node_id") or f"gh_iss_{num}")
-                    stmt_i = select(GitHubIssue).where(
-                        GitHubIssue.owner.ilike(org),
-                        GitHubIssue.repo_name.ilike(repo_name),
-                        GitHubIssue.number == num,
-                    )
-                    res_i = await self.db.execute(stmt_i)
-                    existing_i = res_i.scalar_one_or_none()
-                    if existing_i:
-                        existing_i.title = gh_iss.get("title", existing_i.title)
-                        existing_i.body = gh_iss.get("body", existing_i.body)
-                        existing_i.state = st
-                    else:
-                        new_i = GitHubIssue(
-                            github_id=node_id,
-                            number=num,
-                            repo_name=repo_name,
-                            owner=org,
-                            title=gh_iss.get("title", ""),
-                            body=gh_iss.get("body"),
-                            state=st,
-                            author_login=(gh_iss.get("user") or {}).get("login", "unknown"),
-                            author_avatar=(gh_iss.get("user") or {}).get("avatar_url"),
-                        )
-                        self.db.add(new_i)
-            except Exception as exc:
-                logger.warning("Issue sync failed for %s (non-fatal): %s", full_name, exc)
 
             try:
                 stmt_r = select(Repository).where(

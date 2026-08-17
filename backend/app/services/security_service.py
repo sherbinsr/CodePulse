@@ -4,16 +4,17 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import httpx
 from fastapi import HTTPException
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.models.vulnerability_scan import VulnerabilityScan
 from app.services.github_service import GitHubService
+from app.services.gitlab_service import GitLabService
 
 logger = logging.getLogger(__name__)
 
@@ -81,13 +82,7 @@ Adhere to this JSON schema:
   "remediation_roadmap": {
     "quick_wins": ["<Immediate actionable fix 1>", "<Immediate actionable fix 2>"],
     "long_term": ["<Architectural/ongoing improvement 1>", "<Improvement 2>"]
-  },
-  "recommended_tools": [
-    {
-      "name": "<Tool Name, e.g. Snyk / Dependabot / Semgrep / Trivy / OWASP ZAP>",
-      "purpose": "<Why this tool is recommended for this stack>"
-    }
-  ]
+  }
 }
 """
 
@@ -97,44 +92,73 @@ class SecurityService:
         self.db = db
 
     @staticmethod
-    async def verify_openai_key(api_key: str) -> Dict[str, Any]:
-        """Verify if an OpenAI API key is valid."""
+    async def verify_openai_key(api_key: str) -> dict[str, Any]:
+        """Validate an OpenAI API key against the OpenAI /v1/models endpoint."""
         if not api_key or not api_key.strip():
-            return {"valid": False, "message": "API key cannot be empty."}
+            return {"valid": False, "error": "API key is required"}
 
-        cleaned_key = api_key.strip()
+        clean_key = api_key.strip()
+        headers = {
+            "Authorization": f"Bearer {clean_key}",
+            "Content-Type": "application/json",
+        }
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(
-                    "https://api.openai.com/v1/models",
-                    headers={"Authorization": f"Bearer {cleaned_key}"},
-                )
+                resp = await client.get("https://api.openai.com/v1/models", headers=headers)
                 if resp.status_code == 200:
-                    return {"valid": True, "message": "OpenAI API key is valid and connected successfully."}
-                elif resp.status_code == 401:
-                    return {"valid": False, "message": "Invalid OpenAI API key. Check key and permissions."}
-                elif resp.status_code == 429:
+                    models_data = resp.json().get("data", [])
+                    available_models = [
+                        m["id"]
+                        for m in models_data
+                        if m["id"] in ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+                    ]
                     return {
                         "valid": True,
-                        "message": "OpenAI API key is valid, but rate limit or quota exceeded.",
+                        "available_models": available_models or ["gpt-4o-mini", "gpt-4o"],
                     }
+                elif resp.status_code == 401:
+                    return {"valid": False, "error": "Invalid OpenAI API key (Unauthorized)."}
                 else:
-                    return {
-                        "valid": False,
-                        "message": f"OpenAI API responded with status {resp.status_code}: {resp.text[:100]}",
-                    }
-        except Exception as e:
-            logger.warning("OpenAI key verification error: %s", e)
-            return {"valid": False, "message": f"Could not connect to OpenAI: {str(e)}"}
+                    return {"valid": False, "error": f"OpenAI returned status {resp.status_code}."}
+        except httpx.RequestError as exc:
+            return {"valid": False, "error": f"Network error connecting to OpenAI: {str(exc)}"}
+
+    async def get_repo_branches(
+        self, org: str, repo_name: str, provider: str, user: User
+    ) -> dict[str, Any]:
+        """Fetch available branches for a repository."""
+        default_branch = "main"
+        branches: list[dict[str, Any]] = []
+
+        if provider == "gitlab" and user.gitlab_token:
+            gl = GitLabService(user.gitlab_token)
+            branches = await gl.get_project_branches(f"{org}/{repo_name}")
+        elif user.github_token:
+            gh = GitHubService(user.github_token)
+            branches = await gh.get_repo_branches(org, repo_name)
+
+        branch_names = [b["name"] for b in branches]
+        if "main" in branch_names:
+            default_branch = "main"
+        elif "master" in branch_names:
+            default_branch = "master"
+        elif branch_names:
+            default_branch = branch_names[0]
+
+        if not branches:
+            branches = [{"name": "main", "protected": True, "commit_sha": None}]
+
+        return {
+            "repo_name": repo_name,
+            "default_branch": default_branch,
+            "branches": branches,
+        }
 
     async def get_repository_security_context(
-        self, org: str, repo_name: str, provider: str, user: User
-    ) -> Dict[str, Any]:
-        """Collect security-relevant files, configs, and manifests from the repository."""
-        context: Dict[str, Any] = {
-            "org": org,
-            "repo_name": repo_name,
-            "provider": provider,
+        self, org: str, repo_name: str, provider: str, user: User, branch: str = "main"
+    ) -> dict[str, Any]:
+        """Attempt to fetch dependency manifests, configuration files, and workflows for analysis."""
+        context = {
             "manifests": {},
             "configs": {},
             "workflows": {},
@@ -204,16 +228,16 @@ class SecurityService:
             # Fetch manifest files
             for fname in manifest_files:
                 try:
-                    content = await self._fetch_github_file(gh, org, repo_name, fname)
+                    content = await self._fetch_github_file(gh, org, repo_name, fname, ref=branch)
                     if content:
-                        context["manifests"][fname] = content[:3000]  # truncate to keep tokens lean
+                        context["manifests"][fname] = content[:3000]
                 except Exception:
                     pass
 
             # Fetch config files
             for fname in config_files:
                 try:
-                    content = await self._fetch_github_file(gh, org, repo_name, fname)
+                    content = await self._fetch_github_file(gh, org, repo_name, fname, ref=branch)
                     if content:
                         context["configs"][fname] = content[:2500]
                 except Exception:
@@ -222,7 +246,7 @@ class SecurityService:
             # Fetch workflow files
             for fname in workflow_files:
                 try:
-                    content = await self._fetch_github_file(gh, org, repo_name, fname)
+                    content = await self._fetch_github_file(gh, org, repo_name, fname, ref=branch)
                     if content:
                         context["workflows"][fname] = content[:2000]
                 except Exception:
@@ -231,7 +255,7 @@ class SecurityService:
             # Fetch sample code files
             for fname in sample_code_files:
                 try:
-                    content = await self._fetch_github_file(gh, org, repo_name, fname)
+                    content = await self._fetch_github_file(gh, org, repo_name, fname, ref=branch)
                     if content:
                         context["sample_code"][fname] = content[:2500]
                 except Exception:
@@ -240,10 +264,13 @@ class SecurityService:
         return context
 
     @staticmethod
-    async def _fetch_github_file(gh: GitHubService, owner: str, repo: str, file_path: str) -> Optional[str]:
-        """Fetch raw content of a file from GitHub REST API."""
+    async def _fetch_github_file(
+        gh: GitHubService, owner: str, repo: str, file_path: str, ref: Optional[str] = None
+    ) -> Optional[str]:
+        """Fetch raw content of a file from GitHub REST API for a specific branch/ref."""
         try:
-            file_data = await gh._rest_get(f"/repos/{owner}/{repo}/contents/{file_path}")
+            params = {"ref": ref} if ref else {}
+            file_data = await gh._rest_get(f"/repos/{owner}/{repo}/contents/{file_path}", params=params)
             if isinstance(file_data, dict):
                 encoding = file_data.get("encoding")
                 content = file_data.get("content", "")
@@ -263,16 +290,16 @@ class SecurityService:
         model: str,
         org: str,
         repo_name: str,
-        context: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        branch: str,
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
         """Send prompt to OpenAI API and parse structured vulnerability assessment."""
-        # Format user prompt with codebase context
-        context_str = f"Repository: {org}/{repo_name}\n\n"
+        context_str = f"Repository: {org}/{repo_name}\nTarget Branch: {branch}\n\n"
 
         if context.get("manifests"):
             context_str += "### DEPENDENCY MANIFESTS & LOCKFILES:\n"
             for fname, content in context["manifests"].items():
-                context_str += f"--- File: {fname} ---\n{content}\n\n"
+                context_str += f"--- File: {fname} (branch: {branch}) ---\n{content}\n\n"
 
         if context.get("configs"):
             context_str += "### CONFIGURATION & ENVIRONMENT FILES:\n"
@@ -297,11 +324,11 @@ class SecurityService:
         ):
             context_str += (
                 "Note: Direct repository file access was limited. Perform an overarching assessment "
-                f"for standard industry practices for repository '{repo_name}' under organization '{org}'."
+                f"for standard industry practices for repository '{repo_name}' (branch: '{branch}') under organization '{org}'."
             )
 
         user_prompt = (
-            f"Conduct a comprehensive vulnerability assessment of '{org}/{repo_name}' following the 5-step process:\n"
+            f"Conduct a comprehensive vulnerability assessment of '{org}/{repo_name}' on branch '{branch}' following the 5-step process:\n"
             "1. Dependency Audit (known CVEs, outdated packages, trust signals)\n"
             "2. Configuration Review (Secrets, CORS, CSP, TLS, Security Headers, Debug mode, Default creds)\n"
             "3. Code Pattern Analysis (Injection, eval, crypto, auth checks, file traversal)\n"
@@ -323,59 +350,42 @@ class SecurityService:
                 {"role": "system", "content": VULNERABILITY_ASSESSMENT_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
-            "response_format": {"type": "json_object"},
             "temperature": 0.2,
+            "response_format": {"type": "json_object"},
         }
 
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            try:
+                resp = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
                 if resp.status_code != 200:
-                    # Retry without response_format if model does not support it
-                    if "response_format" in resp.text:
-                        payload.pop("response_format", None)
-                        resp = await client.post(
-                            "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-                        )
-
-                if resp.status_code == 401:
+                    err_msg = resp.text
+                    try:
+                        err_json = resp.json()
+                        err_msg = err_json.get("error", {}).get("message", resp.text)
+                    except Exception:
+                        pass
                     raise HTTPException(
                         status_code=400,
-                        detail="Invalid OpenAI API key. Please update your key in Settings.",
-                    )
-                elif resp.status_code == 429:
-                    raise HTTPException(
-                        status_code=429,
-                        detail="OpenAI rate limit or quota exceeded. Please check your OpenAI billing.",
-                    )
-                elif resp.status_code != 200:
-                    raise HTTPException(
-                        status_code=502,
-                        detail=f"OpenAI API error ({resp.status_code}): {resp.text[:200]}",
+                        detail=f"OpenAI API Error ({resp.status_code}): {err_msg}",
                     )
 
-                data = resp.json()
-                content = data["choices"][0]["message"]["content"]
-                return self._parse_assessment_json(content)
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("Failed to execute OpenAI vulnerability scan: %s", e)
-            raise HTTPException(status_code=500, detail=f"Vulnerability assessment failed: {str(e)}")
-
-    def _parse_assessment_json(self, raw_text: str) -> Dict[str, Any]:
-        """Extract and sanitize JSON from OpenAI response."""
-        cleaned = raw_text.strip()
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```(?:json)?\n", "", cleaned)
-            cleaned = re.sub(r"\n```$", "", cleaned)
+                response_data = resp.json()
+                raw_content = response_data["choices"][0]["message"]["content"]
+            except httpx.RequestError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to communicate with OpenAI API: {str(exc)}",
+                ) from exc
 
         try:
-            parsed = json.loads(cleaned)
-        except Exception:
-            # Try finding the first JSON object with regex
-            match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+            parsed = json.loads(raw_content)
+        except json.JSONDecodeError:
+            # Fallback regex search for embedded JSON
+            match = re.search(r"\{.*\}", raw_content, re.DOTALL)
             if match:
                 try:
                     parsed = json.loads(match.group(0))
@@ -421,7 +431,6 @@ class SecurityService:
             "findings": findings,
             "dependency_report": parsed.get("dependency_report", []),
             "remediation_roadmap": parsed.get("remediation_roadmap", {"quick_wins": [], "long_term": []}),
-            "recommended_tools": parsed.get("recommended_tools", []),
         }
 
     async def run_assessment(
@@ -430,6 +439,7 @@ class SecurityService:
         repo_name: str,
         provider: str,
         user: User,
+        branch: Optional[str] = "main",
         custom_openai_key: Optional[str] = None,
         model: Optional[str] = None,
     ) -> VulnerabilityScan:
@@ -441,11 +451,14 @@ class SecurityService:
                 detail="OpenAI API key is missing. Please add your OpenAI key in Settings or provide it in the scan request.",
             )
 
+        target_branch = (branch or "main").strip()
         chosen_model = model or user.openai_model or "gpt-4o-mini"
         repo_full_name = f"{org}/{repo_name}"
 
-        # 1. Extract context from repo
-        context = await self.get_repository_security_context(org, repo_name, provider, user)
+        # 1. Extract context from repo on selected branch
+        context = await self.get_repository_security_context(
+            org, repo_name, provider, user, branch=target_branch
+        )
 
         # 2. Run assessment with OpenAI
         result = await self.call_openai_vulnerability_assessment(
@@ -453,6 +466,7 @@ class SecurityService:
             model=chosen_model,
             org=org,
             repo_name=repo_name,
+            branch=target_branch,
             context=context,
         )
 
@@ -462,6 +476,7 @@ class SecurityService:
             repo_name=repo_name,
             repo_full_name=repo_full_name,
             provider=provider,
+            branch=target_branch,
             security_score=result["security_score"],
             grade=result["grade"],
             critical_count=result["critical_count"],
@@ -473,7 +488,6 @@ class SecurityService:
             findings=result["findings"],
             dependency_report=result["dependency_report"],
             remediation_roadmap=result["remediation_roadmap"],
-            recommended_tools=result["recommended_tools"],
             model_used=chosen_model,
             scanned_by_user_id=user.id,
             created_at=datetime.utcnow(),
@@ -485,7 +499,7 @@ class SecurityService:
 
     async def get_scans_for_org(
         self, org: str, repo_name: Optional[str] = None, limit: int = 50
-    ) -> List[VulnerabilityScan]:
+    ) -> list[VulnerabilityScan]:
         """Fetch past vulnerability scans for an organization or repository."""
         stmt = select(VulnerabilityScan).where(VulnerabilityScan.org == org)
         if repo_name:
@@ -509,7 +523,7 @@ class SecurityService:
         await self.db.commit()
         return True
 
-    async def get_org_security_summary(self, org: str) -> Dict[str, Any]:
+    async def get_org_security_summary(self, org: str) -> dict[str, Any]:
         """Get high-level organizational security overview."""
         scans = await self.get_scans_for_org(org, limit=100)
         if not scans:
@@ -524,7 +538,6 @@ class SecurityService:
                 "recent_scans": [],
             }
 
-        # Unique repos scanned
         unique_repos = set(s.repo_name for s in scans)
         avg_score = sum(s.security_score for s in scans) / len(scans)
         total_crit = sum(s.critical_count for s in scans)
