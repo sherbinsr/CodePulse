@@ -1,5 +1,6 @@
 import logging
 import mimetypes
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
@@ -189,9 +190,23 @@ async def upload_repository_documentation_file(
         raise HTTPException(status_code=404, detail="Repository not found")
 
     file_bytes = await file.read()
-    file_name = file.filename or "uploaded_document.md"
+    if len(file_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (maximum 25MB allowed)")
 
-    if file_name.lower().endswith(".md"):
+    raw_name = file.filename or "uploaded_document.md"
+    file_name = os.path.basename(raw_name).strip()
+    if not file_name:
+        file_name = "uploaded_document.md"
+
+    # Whitelist check
+    allowed_extensions = (".md", ".doc", ".docx", ".pdf", ".txt", ".rst", ".markdown")
+    if not file_name.lower().endswith(allowed_extensions):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Allowed formats: .md, .doc, .docx, .pdf, .txt, .rst",
+        )
+
+    if file_name.lower().endswith((".md", ".markdown")):
         file_type = "markdown"
     elif file_name.lower().endswith((".doc", ".docx")):
         file_type = "doc"

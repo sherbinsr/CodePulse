@@ -215,11 +215,23 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
             <td className="p-2.5 border-b border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300" {...props} />
           ),
           a: ({ node, href, children, ...props }: any) => {
-            if (href && href.startsWith("#")) {
-              const targetId = href.substring(1);
+            if (!href) return <span>{children}</span>;
+
+            const cleanHref = href.trim();
+            // Block dangerous protocol execution
+            if (
+              cleanHref.toLowerCase().startsWith("javascript:") ||
+              cleanHref.toLowerCase().startsWith("data:") ||
+              cleanHref.toLowerCase().startsWith("vbscript:")
+            ) {
+              return <span className="text-slate-600 dark:text-slate-400">{children}</span>;
+            }
+
+            if (cleanHref.startsWith("#")) {
+              const targetId = cleanHref.substring(1);
               return (
                 <a
-                  href={href}
+                  href={cleanHref}
                   onClick={(e) => {
                     e.preventDefault();
                     scrollToHeading(targetId);
@@ -233,7 +245,7 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
             }
             return (
               <a
-                href={href}
+                href={cleanHref}
                 className="text-indigo-600 dark:text-indigo-400 font-medium underline underline-offset-2 hover:text-indigo-500"
                 target="_blank"
                 rel="noopener noreferrer"

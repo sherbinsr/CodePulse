@@ -40,6 +40,15 @@ class S3Service:
         else:
             logger.info("AWS credentials not configured. Using local filesystem S3 fallback at %s", self.local_storage_dir)
 
+    def _safe_local_path(self, key: str) -> Path:
+        """Resolve path and prevent directory traversal attacks."""
+        safe_key = key.lstrip("/\\")
+        base_dir = self.local_storage_dir.resolve()
+        target = (self.local_storage_dir / safe_key).resolve()
+        if not str(target).startswith(str(base_dir)):
+            raise ValueError(f"Path traversal detected in key: {key}")
+        return target
+
     def upload_file(
         self,
         key: str,
@@ -69,13 +78,16 @@ class S3Service:
                 logger.warning("S3 upload for %s failed (%s). Falling back to local storage.", key, e)
 
         # Always maintain local copy fallback for reliability
-        local_path = self.local_storage_dir / key
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(local_path, "wb") as f:
-            f.write(body_bytes)
+        try:
+            local_path = self._safe_local_path(key)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(local_path, "wb") as f:
+                f.write(body_bytes)
 
-        if not uploaded_to_s3:
-            logger.info("Saved %s to local S3 fallback store at %s", key, local_path)
+            if not uploaded_to_s3:
+                logger.info("Saved %s to local S3 fallback store at %s", key, local_path)
+        except Exception as exc:
+            logger.warning("Local storage write failed for key %s: %s", key, exc)
 
         return {
             "s3_bucket": self.bucket_name,
@@ -93,9 +105,12 @@ class S3Service:
             except Exception as e:
                 logger.warning("Could not fetch %s from S3 (%s), checking local fallback...", key, e)
 
-        local_path = self.local_storage_dir / key
-        if local_path.exists():
-            return local_path.read_bytes()
+        try:
+            local_path = self._safe_local_path(key)
+            if local_path.exists():
+                return local_path.read_bytes()
+        except Exception as exc:
+            logger.warning("Local storage read failed for key %s: %s", key, exc)
 
         return None
 
@@ -109,9 +124,12 @@ class S3Service:
             except Exception as e:
                 logger.warning("Failed to delete %s from S3: %s", key, e)
 
-        local_path = self.local_storage_dir / key
-        if local_path.exists():
-            local_path.unlink()
-            deleted = True
+        try:
+            local_path = self._safe_local_path(key)
+            if local_path.exists():
+                local_path.unlink()
+                deleted = True
+        except Exception as exc:
+            logger.warning("Local storage delete failed for key %s: %s", key, exc)
 
         return deleted

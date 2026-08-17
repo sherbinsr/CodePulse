@@ -7,4 +7,8 @@ RUN npm install
 
 COPY . .
 
+# Use built-in node user in alpine
+RUN chown -R node:node /app
+USER node
+
 CMD ["npm", "run", "dev"]
