@@ -19,6 +19,8 @@ class User(Base):
     avatar_url: Mapped[Optional[str]] = mapped_column(Text)
     github_token: Mapped[Optional[str]] = mapped_column(Text)
     gitlab_token: Mapped[Optional[str]] = mapped_column(Text)
+    openai_api_key: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    openai_model: Mapped[Optional[str]] = mapped_column(String(100), default="gpt-4o-mini", nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False

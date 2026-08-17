@@ -5,6 +5,7 @@ import type {
   CISummary, BuildTrend, FlakyWorkflow, CommitActivity, CodeChurn,
   Documentation, RepositoryWithDocs, GitHubRelease, ProjectV2, ProjectBoard, ProjectItem,
   GitHubIssue, IssueTimelineDetails, RepoProject, ProjectTask, RepoProjectBoard,
+  UserSettings, VulnerabilityScan, VulnerabilityScanSummary, OrgSecuritySummary,
 } from "@/types";
 
 
@@ -364,7 +365,6 @@ export const createProjectTask = async (
     assignees?: string[];
     labels?: string[];
     story_points?: number;
-    sync_to_github?: boolean;
   }
 ): Promise<ProjectTask> => {
   const { data } = await api.post(`/api/projects/repo-projects/${projectId}/tasks`, payload);
@@ -392,7 +392,68 @@ export const deleteProjectTask = async (taskId: number): Promise<{ message: stri
   return data;
 };
 
+// Settings & OpenAI Key
+export const getUserSettings = async (): Promise<UserSettings> => {
+  const { data } = await api.get("/api/settings");
+  return data;
+};
+
+export const updateUserSettings = async (payload: {
+  openai_api_key?: string | null;
+  openai_model?: string;
+}): Promise<UserSettings> => {
+  const { data } = await api.post("/api/settings", payload);
+  return data;
+};
+
+export const verifyOpenAIKey = async (
+  openai_api_key: string
+): Promise<{ valid: boolean; message: string }> => {
+  const { data } = await api.post("/api/settings/verify-openai", { openai_api_key });
+  return data;
+};
+
+// Security & Vulnerability Assessment
+export const runVulnerabilityScan = async (payload: {
+  org: string;
+  repo_name: string;
+  provider?: string;
+  openai_api_key?: string;
+  model?: string;
+}): Promise<VulnerabilityScan> => {
+  const { data } = await api.post("/api/security/scan", payload);
+  return data;
+};
+
+export const listVulnerabilityScans = async (
+  org: string,
+  repo?: string,
+  limit = 50
+): Promise<VulnerabilityScanSummary[]> => {
+  const url = repo
+    ? `/api/security/${org}/scans?repo=${encodeURIComponent(repo)}&limit=${limit}`
+    : `/api/security/${org}/scans?limit=${limit}`;
+  const { data } = await api.get(url);
+  return data;
+};
+
+export const getVulnerabilityScan = async (scanId: number): Promise<VulnerabilityScan> => {
+  const { data } = await api.get(`/api/security/scans/${scanId}`);
+  return data;
+};
+
+export const deleteVulnerabilityScan = async (scanId: number): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/api/security/scans/${scanId}`);
+  return data;
+};
+
+export const getOrgSecuritySummary = async (org: string): Promise<OrgSecuritySummary> => {
+  const { data } = await api.get(`/api/security/${org}/summary`);
+  return data;
+};
+
 export default api;
+
 
 
 

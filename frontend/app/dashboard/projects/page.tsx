@@ -77,7 +77,6 @@ export default function ProjectsPage() {
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [customLabelInput, setCustomLabelInput] = useState("");
   const [customAssigneeInput, setCustomAssigneeInput] = useState("");
-  const [taskSyncToGithub, setTaskSyncToGithub] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
 
   // Selected Task Drawer & Linked Timeline Details
@@ -352,7 +351,6 @@ export default function ProjectsPage() {
         story_points: taskStoryPoints,
         assignees: selectedAssignees,
         labels: selectedLabels,
-        sync_to_github: taskSyncToGithub,
       });
 
       setShowCreateTaskModal(false);
@@ -361,7 +359,6 @@ export default function ProjectsPage() {
       setSelectedAssignees([]);
       setSelectedLabels([]);
       setTaskStoryPoints(1);
-      setTaskSyncToGithub(false);
       await fetchRepoBoard(selectedRepoProjectId);
     } catch (err: any) {
       alert("Failed to create task: " + (err?.response?.data?.detail || err.message));
@@ -1130,19 +1127,6 @@ export default function ProjectsPage() {
                     Add Label
                   </button>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="syncGithub"
-                  checked={taskSyncToGithub}
-                  onChange={(e) => setTaskSyncToGithub(e.target.checked)}
-                  className="rounded text-indigo-600"
-                />
-                <label htmlFor="syncGithub" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
-                  Also create as a GitHub Issue on <strong>{selectedRepoName}</strong>
-                </label>
               </div>
 
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">

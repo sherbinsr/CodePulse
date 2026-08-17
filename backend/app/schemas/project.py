@@ -179,7 +179,7 @@ class CreateProjectTaskReq(BaseModel):
     assignees: list[str] = Field(default_factory=list)
     labels: list[str] = Field(default_factory=list)
     story_points: Optional[int] = 1
-    sync_to_github: Optional[bool] = False
+
 
 
 class UpdateProjectTaskReq(BaseModel):

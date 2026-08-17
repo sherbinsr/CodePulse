@@ -11,20 +11,15 @@ import { ReviewTimeChart } from "@/components/dashboard/review-time-chart";
 import {
   getOrgOverview, getDeveloperStats, getMonthlyTrends, getSyncStatus, listOrgs,
 } from "@/lib/api";
-import { getUser } from "@/lib/auth";
+import { getUser, getGitHubOAuthUrl } from "@/lib/auth";
 import { formatHours, getApiError } from "@/lib/utils";
 import type { OrgOverview, DeveloperStat, MonthlyTrend, SyncStatus, User, Org } from "@/types";
 import { GitPullRequest, GitMerge, Clock, Users, Star, BarChart3, Layers, ShieldAlert, Building2 } from "lucide-react";
 
 function GrantPermissionBanner({ onCheckAgain }: { onCheckAgain?: () => void }) {
-  const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID!;
-
+  const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || "";
   const handleReauthorize = () => {
-    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-    const scope = encodeURIComponent("read:org repo read:user user:email");
-    window.location.href =
-      `https://github.com/login/oauth/authorize?client_id=${clientId}` +
-      `&redirect_uri=${redirectUri}&scope=${scope}&prompt=consent`;
+    window.location.href = getGitHubOAuthUrl() + "&prompt=consent";
   };
 
   return (

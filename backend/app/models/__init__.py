@@ -6,6 +6,7 @@ from app.models.pull_request import PRReview, PullRequest
 from app.models.repository import Repository
 from app.models.sync_job import SyncJob
 from app.models.user import User
+from app.models.vulnerability_scan import VulnerabilityScan
 from app.models.workflow_run import WorkflowRun
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "Repository",
     "SyncJob",
     "User",
+    "VulnerabilityScan",
     "WorkflowRun",
 ]
 

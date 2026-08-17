@@ -1164,43 +1164,7 @@ async def create_project_task(
 
     assignees_list = [{"login": a} for a in body.assignees]
     labels_list = [{"name": l, "color": "808080"} for l in body.labels]
-
     issue_id = None
-    if body.sync_to_github and current_user.github_token:
-        try:
-            gh = GitHubService(current_user.github_token)
-            gh_iss = await gh.create_issue(
-                owner=project.org,
-                repo=project.repo_name,
-                title=body.title,
-                body=body.description or "",
-                assignees=body.assignees,
-                labels=body.labels,
-            )
-
-            stmt_iss = select(GitHubIssue).where(GitHubIssue.github_id == gh_iss.get("node_id"))
-            res_iss = await db.execute(stmt_iss)
-            iss = res_iss.scalar_one_or_none()
-
-            if not iss:
-                iss = GitHubIssue(
-                    github_id=gh_iss.get("node_id", f"I_task_{datetime.utcnow().timestamp()}"),
-                    number=gh_iss["number"],
-                    repo_name=project.repo_name,
-                    owner=project.org,
-                    title=gh_iss["title"],
-                    body=gh_iss.get("body"),
-                    state=gh_iss.get("state", "open"),
-                    author_login=current_user.login,
-                    assignees_json=json.dumps(assignees_list),
-                    labels_json=json.dumps(labels_list),
-                )
-                db.add(iss)
-                await db.flush()
-
-            issue_id = iss.id
-        except Exception as e:
-            logger.warning("Could not sync task to GitHub Issue: %s", e)
 
     # Compute sequential ticket_key for the project task, e.g. SSA-I100
     prefix = project.key_prefix or generate_project_prefix(project.repo_name, project.name)

@@ -345,5 +345,89 @@ export interface RepoProjectBoard {
   tasks: ProjectTask[];
 }
 
+export interface UserSettings {
+  has_openai_key: boolean;
+  openai_key_masked: string | null;
+  openai_model: string;
+}
+
+export interface VulnerabilityFinding {
+  title: string;
+  severity: "Critical" | "High" | "Medium" | "Low";
+  cvss: number;
+  component: string;
+  description: string;
+  remediation: string;
+  quick_win: boolean;
+}
+
+export interface DependencyReportItem {
+  package: string;
+  version: string;
+  status: "Secure" | "Outdated" | "Vulnerable" | "Unmaintained";
+  known_issues: string | null;
+  recommendation: string | null;
+}
+
+export interface RemediationRoadmap {
+  quick_wins: string[];
+  long_term: string[];
+}
+
+export interface RecommendedTool {
+  name: string;
+  purpose: string;
+}
+
+export interface VulnerabilityScan {
+  id: number;
+  org: string;
+  repo_name: string;
+  repo_full_name: string;
+  provider: "github" | "gitlab";
+  security_score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+  status: string;
+  executive_summary: string | null;
+  findings: VulnerabilityFinding[];
+  dependency_report: DependencyReportItem[];
+  remediation_roadmap: RemediationRoadmap | null;
+  recommended_tools: RecommendedTool[];
+  model_used: string | null;
+  created_at: string;
+}
+
+export interface VulnerabilityScanSummary {
+  id: number;
+  org: string;
+  repo_name: string;
+  repo_full_name: string;
+  provider: "github" | "gitlab";
+  security_score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+  status: string;
+  created_at: string;
+}
+
+export interface OrgSecuritySummary {
+  org: string;
+  total_scanned_repos: number;
+  average_security_score: number;
+  total_critical: number;
+  total_high: number;
+  total_medium: number;
+  total_low: number;
+  recent_scans: VulnerabilityScanSummary[];
+}
+
+
 
 

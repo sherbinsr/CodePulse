@@ -50,6 +50,23 @@ async def init_db():
             except Exception:
                 pass
 
+        # Auto-migrate users table columns for OpenAI settings
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS openai_api_key TEXT"))
+        except Exception:
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN openai_api_key TEXT"))
+            except Exception:
+                pass
+
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS openai_model VARCHAR(100) DEFAULT 'gpt-4o-mini'"))
+        except Exception:
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN openai_model VARCHAR(100) DEFAULT 'gpt-4o-mini'"))
+            except Exception:
+                pass
+
         # Auto-migrate pull_requests table columns
         pr_cols = [
             ("body", "TEXT"),
@@ -68,3 +85,5 @@ async def init_db():
                     await conn.execute(text(f"ALTER TABLE pull_requests ADD COLUMN {col} {col_type}"))
                 except Exception:
                     pass
+
+

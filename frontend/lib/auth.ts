@@ -29,8 +29,10 @@ export function logout(): void {
 
 export function getGitHubOAuthUrl(): string {
   const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID!;
-  const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-  const scope = encodeURIComponent("read:org repo read:user user:email read:project project");
+  const redirectUri = encodeURIComponent(
+    typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : ""
+  );
+  const scope = encodeURIComponent("read:org read:user user:email read:project");
   return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 }
 

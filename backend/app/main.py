@@ -14,7 +14,10 @@ from app.routers import (
     documentation_router,
     org_router,
     project_router,
+    security_router,
+    settings_router,
 )
+
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -90,6 +93,9 @@ app.include_router(org_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
 app.include_router(documentation_router, prefix="/api")
 app.include_router(project_router, prefix="/api")
+app.include_router(security_router, prefix="/api")
+app.include_router(settings_router, prefix="/api")
+
 
 
 @app.get("/health", tags=["Health"])

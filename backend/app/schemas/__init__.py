@@ -9,6 +9,20 @@ from app.schemas.auth import AuthCallbackRequest, AuthResponse, UserOut
 from app.schemas.organization import OrgOut, SyncStatusOut, SyncTriggerResponse
 from app.schemas.pull_request import PRListResponse, PullRequestOut
 
+from app.schemas.security import (
+    OrgSecuritySummary,
+    VulnerabilityFinding,
+    VulnerabilityScanRequest,
+    VulnerabilityScanResponse,
+    VulnerabilityScanSummary,
+)
+from app.schemas.settings import (
+    UserSettingsOut,
+    UserSettingsUpdate,
+    VerifyOpenAIKeyRequest,
+    VerifyOpenAIKeyResponse,
+)
+
 __all__ = [
     "AuthCallbackRequest",
     "AuthResponse",
@@ -16,6 +30,7 @@ __all__ = [
     "MonthlyTrendOut",
     "OrgOut",
     "OrgOverviewOut",
+    "OrgSecuritySummary",
     "PRListResponse",
     "PullRequestOut",
     "ReviewNetworkOut",
@@ -23,4 +38,13 @@ __all__ = [
     "SyncStatusOut",
     "SyncTriggerResponse",
     "UserOut",
+    "UserSettingsOut",
+    "UserSettingsUpdate",
+    "VerifyOpenAIKeyRequest",
+    "VerifyOpenAIKeyResponse",
+    "VulnerabilityFinding",
+    "VulnerabilityScanRequest",
+    "VulnerabilityScanResponse",
+    "VulnerabilityScanSummary",
 ]
+
